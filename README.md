@@ -1,7 +1,6 @@
 # MLBLiveScoreboard
 Python script to print live MLB game scoreboards to console
 
-=====================================================================
 NAME:    MLBLiveScoreboard.py (C) 2018
 PURPOSE: To produce a simple, live scoreboard to track MLB game play
          on your computer.
@@ -22,7 +21,7 @@ PURPOSE: To produce a simple, live scoreboard to track MLB game play
          MLBLiveScoreboard, v0.02
 
 AUTHOR:  MSRoth
-USAGE:   >python mlblivescoreboard <date of game> <away team> <home team> <game number>
+USAGE:   >>python mlblivescoreboard <date of game> <away team> <home team> <game number>
 COMMENTS:
     - this script makes use of the mlbgame package by panzarino
       (https://github.com/panzarino/mlbgame) to retrieve and parse
@@ -35,4 +34,4 @@ COMMENTS:
     - this is the first Python program I have ever written, so I am sure
       there are a lot of style mistakes and use of brute force where
       finesse is available to a more experienced programmer.
-=====================================================================
+
