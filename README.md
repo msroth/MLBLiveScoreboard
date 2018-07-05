@@ -34,4 +34,3 @@ COMMENTS:
     - this is the first Python program I have ever written, so I am sure
       there are a lot of style mistakes and use of brute force where
       finesse is available to a more experienced programmer.
-
