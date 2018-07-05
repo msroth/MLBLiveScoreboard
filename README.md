@@ -23,7 +23,7 @@ PURPOSE: To produce a simple, live scoreboard to track MLB game play
 
 AUTHOR:  MSRoth
 
-USAGE:   >>python mlblivescoreboard <date of game> <away team> <home team> <game number>
+USAGE:   >>python mlblivescoreboard date_of_game away_team home_team game_number
          
 COMMENTS:
 
