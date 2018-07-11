@@ -33,6 +33,14 @@ COMMENTS:
     - this is the first Python program I have ever written, so I am sure
       there are a lot of style mistakes and use of brute force where
       finesse is available to a more experienced programmer.
+    - the accuracy of the scoreboard is only as good as the MLB XML data
+      published at gd2.mlb.com.  Often this data is late, incomplete, and just
+      wrong.
+
+TODO:
+    - pass in a list of games and show multiple scoreboards at once
+
+
 =====================================================================
 """
 
@@ -55,6 +63,11 @@ Sample games for testing
 2018-05-20 DET SEA 1 -- 11 innings
 2018-06-02 WAS ATL 1 -- 14 innings
 2018-05-18 LA WAS 1 -- postponed
+
+MLB Data URL
+http://gd2.mlb.com/components/game/mlb/year_{0}/month_{1:02d}/day_{2:02d}
+http://gd2.mlb.com/components/game/mlb/year_2018/month_07/day_11
+
 """
 
 # Init global variables outside of loop
@@ -455,8 +468,10 @@ def get_bases_and_commentary(game_id):
             # Loop through all events and just save data from the last one
             # Kind of a brute for approach
             for event in inn:
-                commentary = event.nice_output()
-
+                if len(event.nice_output()) > 0 :
+                    commentary = event.nice_output()
+                else:
+                    commentary = ' '
                 # get each batters base status
                 if len(str(event.b1)) > 0:
                     first = 'x'
@@ -655,6 +670,6 @@ while not end_loop:
         if game_status.upper() == 'DELAYED':
             time.sleep(60)
         else:
-            time.sleep(30)
+            time.sleep(20)
 
 ### <SDG>< ###
