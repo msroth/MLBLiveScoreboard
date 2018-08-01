@@ -74,7 +74,7 @@ http://gd2.mlb.com/components/game/mlb/year_2018/month_07/day_11
 debug = False  # will only be set to true if command line is not used and will save XML files for debugging
 MLB_TEAM_NAMES_DICT = {}
 NAME = 'MLBLiveScoreboard, (c)2018 MSRoth'
-VERSION = '0.02'
+VERSION = '0.03'
 game_status = ''
 game_date = ''
 away_team = ''
@@ -318,7 +318,7 @@ def build_pitcher_batter_line(mlbgame_game, i, s):
                             if batter.pitcher == pitcher.id:
                                 # print('-found pitcher: ' + pitcher.boxname)
                                 pitcher_line = pitcher.boxname + ' (' + '{:.3}'.format(pitcher.era) + ' ERA)'
-    output = 'Pitching: ' + pitcher_line + '  Batting: ' + batter_line
+    output = 'Pitching: ' + pitcher_line + ', Batting: ' + batter_line
     return output
 
 
@@ -413,7 +413,7 @@ def build_base_and_commentary_lines(game, w):
     # Build the base configuration
     out_lines[0] = '   [' + bases[1] + ']    | Commentary: '
     out_lines[1] = '[' + bases[2] + ']   [' + bases[0] + '] | '
-    out_lines[2] = '   [ ]    | '
+    out_lines[2] = '   [o]    | '
 
     # Add commentary, hard chopped not to extend past end of scoreboard (i.e., wrap)
     if commentary:
@@ -630,12 +630,13 @@ while not end_loop:
         # print('Status: ' + ov.inning_state + ' of ' + str(ov.inning))
 
         if ov.inning_state.upper() != 'END' and ov.inning_state.upper() != 'MIDDLE':
-            # TODO - batter is always one player behind
-            # print(build_pitcher_batter_line(game, ov.inning, ov.inning_state))
 
             # Print status and B-S-O
-            print('Status: ' + ov.inning_state + ' of ' + str(ov.inning) + ' - Balls: ' +
+            print('Status: ' + ov.inning_state + ' of ' + str(ov.inning) + ', Balls: ' +
                   str(ov.balls) + '  Strikes: ' + str(ov.strikes) + '  Outs: ' + str(ov.outs))
+
+            # Print batter and pitcher info
+            print(build_pitcher_batter_line(game, ov.inning, ov.inning_state))
 
             # Print commentary
             output = build_base_and_commentary_lines(game, len(double_bar))
@@ -656,7 +657,11 @@ while not end_loop:
 
     # Print game note if there is one
     if game_note:
-        print('Note: ' + game_note)
+        if len(game_note) > len(double_bar):
+            print('Note: ' + game_note[:len(double_bar)-5])
+            print('      ' + game_note[len(double_bar)-5+1:])
+        else:
+            print('Note: ' + game_note)
 
     print(double_bar)
 
