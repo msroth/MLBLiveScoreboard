@@ -50,10 +50,12 @@ import time
 import os
 
 # https://github.com/panzarino/mlbgame
-import mlbgame.events
-import mlbgame.data
-import mlbgame.info
-import mlbgame.stats
+import mlbgame
+
+from lxml import etree
+
+from urllib.request import urlopen
+from urllib.error import HTTPError
 
 """
 Sample games for testing
@@ -74,7 +76,7 @@ http://gd2.mlb.com/components/game/mlb/year_2018/month_07/day_11
 debug = False  # will only be set to true if command line is not used and will save XML files for debugging
 MLB_TEAM_NAMES_DICT = {}
 NAME = 'MLBLiveScoreboard, (c)2018 MSRoth'
-VERSION = '0.03'
+VERSION = '0.04'
 game_status = ''
 game_date = ''
 away_team = ''
@@ -290,6 +292,8 @@ def build_pitcher_batter_line(mlbgame_game, i, s):
     batter_line = ''
     pitcher_line = ''
     output = ''
+
+    """
     innings = mlbgame.game_events(mlbgame_game.game_id)
     player_list = mlbgame.players(mlbgame_game.game_id)
 
@@ -318,8 +322,140 @@ def build_pitcher_batter_line(mlbgame_game, i, s):
                             if batter.pitcher == pitcher.id:
                                 # print('-found pitcher: ' + pitcher.boxname)
                                 pitcher_line = pitcher.boxname + ' (' + '{:.3}'.format(pitcher.era) + ' ERA)'
+    """
+
+    """Return the miniscoreboard file of a game with matching id."""
+    year, month, day = mlbgame.data.get_date_from_game_id(mlbgame_game.game_id)
+    try:
+        return urlopen(mlbgame.data.GAME_URL.format(year, month, day,
+                                                    mlbgame_game.game_id, 'miniscoreboard.xml'))
+    except HTTPError:
+        raise ValueError('Could not find a game with that id.')
+
+    mini = get_miniscoreboard(game.game_id)
+    # parse data
+    if mini is not None:
+        parsed = etree.parse(mini)
+        root = parsed.getroot()
+        ingame = root.find('in_game')
+
+        if ingame is not None:
+            pitcher = ingame.find('pitcher')
+            pitcher_line = pitcher.get('name_display_roster') + " (" + \
+                pitcher.get('era') + "ERA)"
+            batter = ingame.find('batter')
+            batter_line = batter.get('name_display_roster') + " (" + \
+                    batter.get('avg') + " AVG)"
+
     output = 'Pitching: ' + pitcher_line + ', Batting: ' + batter_line
     return output
+
+
+def get_miniscoreboard_data(game,w):
+
+    status_line = ''
+    pitcher_batter_line = ''
+    base_commentary_lines = ['', '', '']
+    t_b_in = ''
+
+    """Return the miniscoreboard file of a game with matching id."""
+    year, month, day = mlbgame.data.get_date_from_game_id(game.game_id)
+    try:
+        mini = urlopen(mlbgame.data.GAME_URL.format(year, month, day,
+                                                    game.game_id, 'miniscoreboard.xml'))
+    except HTTPError:
+        raise ValueError('Could not find a game with that id.')
+
+
+    # parse data
+    if mini is not None:
+        parsed = etree.parse(mini)
+        root = parsed.getroot()
+        ingame = root.find('in_game')
+        game_status = root.find('game_status')
+
+        if game_status is not None:
+            if game_status.get('top_inning') == 'Y':
+                t_b_in = "Top"
+            else:
+                t_b_in = "Bottom"
+            status_line = "Status: " + t_b_in + " of " + game_status.get('inning') + " - "
+            status_line += "Balls: " + game_status.get('b') + " Strikes: " + \
+                           game_status.get('s') + " Outs: " + game_status.get('o')
+
+        if ingame is not None:
+            pitcher = ingame.find('pitcher')
+            pitcher_batter_line = "Pitcher: " + pitcher.get('name_display_roster') + " (" + \
+                pitcher.get('era') + " ERA), "
+            batter = ingame.find('batter')
+            pitcher_batter_line += "Batter: " + batter.get('name_display_roster') + " (" + \
+                    batter.get('avg') + " AVG)"
+
+            if len(ingame.find('runner_on_1b').get('last')) > 0:
+                b1 = "[x]"
+            else:
+                b1 = "[ ]"
+
+            if len(ingame.find('runner_on_2b').get('last')) > 0:
+                b2 = "[x]"
+            else:
+                b2 = "[ ]"
+
+            if len(ingame.find('runner_on_3b').get('last')) > 0:
+                b3 = "[x]"
+            else:
+                b3 = "[ ]"
+
+            commentary = ingame.get('last_pbp')
+
+            # Build the base configuration
+            base_commentary_lines[0] = '   ' + b2 + '    | Last Play: '
+            base_commentary_lines[1] = b3 + '   ' + b1 + ' | '
+            base_commentary_lines[2] = '   [o]    | '
+
+            # Add commentary, hard chopped not to extend past end of scoreboard (i.e., wrap)
+            if commentary:
+                # if len(commentary) > w-24:
+                base_commentary_lines[0] += commentary[:w - 24]
+                commentary = commentary[w - 24:]
+                # else:
+                #    out_lines[0] += commentary
+
+                for i in range(1, 3):
+                    base_commentary_lines[i] += commentary[:w - 12]
+                    commentary = commentary[w - 12:]
+
+    return status_line, pitcher_batter_line, base_commentary_lines
+
+
+def get_dueup_batters(game):
+
+    batters = ['', '', '']
+
+    """Return the miniscoreboard file of a game with matching id."""
+    year, month, day = mlbgame.data.get_date_from_game_id(game.game_id)
+    try:
+        mini = urlopen(mlbgame.data.GAME_URL.format(year, month, day,
+                                                    game.game_id, 'miniscoreboard.xml'))
+    except HTTPError:
+        raise ValueError('Could not find a game with that id.')
+
+
+    # parse data
+    if mini is not None:
+        parsed = etree.parse(mini)
+        root = parsed.getroot()
+        ingame = root.find('in_game')
+
+        if ingame is not None:
+            batter = ingame.find('due_up_batter')
+            batters[0] = batter.get('last') + ' (' + batter.get('avg') + ' AVG)'
+            batter = ingame.find('due_up_ondeck')
+            batters[1] = batter.get('last') + ' (' + batter.get('avg') + ' AVG)'
+            batter = ingame.find('due_up_inhole')
+            batters[2] = batter.get('last') + ' (' + batter.get('avg') + ' AVG)'
+    return batters
+
 
 
 def print_help():
@@ -631,8 +767,9 @@ while not end_loop:
 
         if ov.inning_state.upper() != 'END' and ov.inning_state.upper() != 'MIDDLE':
 
+            """
             # Print status and B-S-O
-            print('Status: ' + ov.inning_state + ' of ' + str(ov.inning) + ', Balls: ' +
+            print('Status: ' + ov.inning_state + ' of ' + str(ov.inning) + ' - Balls: ' +
                   str(ov.balls) + '  Strikes: ' + str(ov.strikes) + '  Outs: ' + str(ov.outs))
 
             # Print batter and pitcher info
@@ -642,9 +779,21 @@ while not end_loop:
             output = build_base_and_commentary_lines(game, len(double_bar))
             for l in output:
                 print(l)
+            """
+
+            # get miniscoreboard data
+            status_line, pitcher_batter_line, base_commentary_line = get_miniscoreboard_data(game, len(double_bar))
+            print(status_line)
+            print(pitcher_batter_line)
+            for l in base_commentary_line:
+                print(l)
 
         else:
             print('Status: ' + ov.inning_state + ' of ' + str(ov.inning))
+            batters = get_dueup_batters(game)
+            print("Due up: " + batters[0])
+            for i in range(1, 3):
+                print('        ' + batters[i])
 
     # Game over
     if game_status.upper() == 'FINAL' or game_status.upper() == 'GAME OVER':
@@ -669,6 +818,60 @@ while not end_loop:
     print(NAME + ', v' + VERSION)
     print()
     sys.stdout.flush()
+
+    """
+    # ### TEST ###
+
+    def get_miniscoreboard(game_id):
+        # Return the raw box score file of a game with matching id.
+        year, month, day = mlbgame.data.get_date_from_game_id(game_id)
+        try:
+            return urlopen(mlbgame.data.GAME_URL.format(year, month, day,
+                                                        game_id, 'miniscoreboard.xml'))
+        except HTTPError:
+            raise ValueError('Could not find a game with that id.')
+
+    print("***** TEST *****")
+
+    # http://gd2.mlb.com/components/game/mlb/year_2018/month_08/day_07/gid_2018_08_07_atlmlb_wasmlb_1/miniscoreboard.xml
+
+    mini = get_miniscoreboard(game.game_id)
+    # parse data
+    parsed = etree.parse(mini)
+    root = parsed.getroot()
+    status = root.iter('game_status')
+    ingame = root.find('in_game')
+
+    if ingame is None:
+        print("Game is over, don't need pitcher/batter/commentary")
+
+    #print("---root---")
+    #for x in root.attrib:
+    #    print(x + " = " + root.attrib[x])
+
+    #print("---status---")
+    #for x in status:
+    #    print("%s = %s" % (x.tag, x.text))
+
+    #print("--- elements ---")
+    #for x in root.getiterator():
+    #    print(x.tag)
+
+    print("---in_game---")
+    #print(ingame.tag)
+    #print(len(ingame))
+    #for x in ingame:
+    #    print(x.tag)
+    if ingame is not None:
+        print("pitcher=" + ingame.find('pitcher').get('name_display_roster'))
+        print("batter=" + ingame.find('batter').get('name_display_roster'))
+        print("pbp = " + ingame.get('last_pbp'))
+        print("1b=" + ingame.find('runner_on_1b').get('last'))
+        print("2b=" + ingame.find('runner_on_2b').get('last'))
+        print("3b=" + ingame.find('runner_on_3b').get('last'))
+
+    """
+
 
     # Sleep for a while and continue with loop
     if not end_loop:
