@@ -1,6 +1,6 @@
 """
 =====================================================================
-NAME:    MLBLiveScoreboard.py (C) 2018
+NAME:    MLBLiveScoreboard.py (C) 2018, 2019
 PURPOSE: To produce a simple, live scoreboard to track MLB game play
          on your computer.
 
@@ -17,7 +17,7 @@ PURPOSE: To produce a simple, live scoreboard to track MLB game play
          Winner: Kyle Freeland (7-6), Loser: Steven Matz (3-5)
          Final
          =========================================================================
-         MLBLiveScoreboard, v0.02
+         MLBLiveScoreboard, v0.04
 
 AUTHOR:  MSRoth
 USAGE:   >python mlblivescoreboard <date of game> <away team> <home team> <game number>
@@ -818,60 +818,6 @@ while not end_loop:
     print(NAME + ', v' + VERSION)
     print()
     sys.stdout.flush()
-
-    """
-    # ### TEST ###
-
-    def get_miniscoreboard(game_id):
-        # Return the raw box score file of a game with matching id.
-        year, month, day = mlbgame.data.get_date_from_game_id(game_id)
-        try:
-            return urlopen(mlbgame.data.GAME_URL.format(year, month, day,
-                                                        game_id, 'miniscoreboard.xml'))
-        except HTTPError:
-            raise ValueError('Could not find a game with that id.')
-
-    print("***** TEST *****")
-
-    # http://gd2.mlb.com/components/game/mlb/year_2018/month_08/day_07/gid_2018_08_07_atlmlb_wasmlb_1/miniscoreboard.xml
-
-    mini = get_miniscoreboard(game.game_id)
-    # parse data
-    parsed = etree.parse(mini)
-    root = parsed.getroot()
-    status = root.iter('game_status')
-    ingame = root.find('in_game')
-
-    if ingame is None:
-        print("Game is over, don't need pitcher/batter/commentary")
-
-    #print("---root---")
-    #for x in root.attrib:
-    #    print(x + " = " + root.attrib[x])
-
-    #print("---status---")
-    #for x in status:
-    #    print("%s = %s" % (x.tag, x.text))
-
-    #print("--- elements ---")
-    #for x in root.getiterator():
-    #    print(x.tag)
-
-    print("---in_game---")
-    #print(ingame.tag)
-    #print(len(ingame))
-    #for x in ingame:
-    #    print(x.tag)
-    if ingame is not None:
-        print("pitcher=" + ingame.find('pitcher').get('name_display_roster'))
-        print("batter=" + ingame.find('batter').get('name_display_roster'))
-        print("pbp = " + ingame.get('last_pbp'))
-        print("1b=" + ingame.find('runner_on_1b').get('last'))
-        print("2b=" + ingame.find('runner_on_2b').get('last'))
-        print("3b=" + ingame.find('runner_on_3b').get('last'))
-
-    """
-
 
     # Sleep for a while and continue with loop
     if not end_loop:
