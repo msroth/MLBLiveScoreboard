@@ -26,8 +26,11 @@ PURPOSE: To produce a simple, live scoreboard to track MLB game play
 AUTHOR:  MSRoth
 
 USAGE:   >python MLB-live-scoreboard.py [favorite_team] [away_team, home_team, game_date]
+
          For example:
+         
          python MLB-live-scoreboard.py WSH
+         
          python MLB-live-scoreboard.py WSH PHI 04/10/2019
 
          No arguments reads data from config.py file.
