@@ -1,44 +1,82 @@
 # MLBLiveScoreboard
 Python script to print live MLB game scoreboards to console
 
-NAME:    MLBLiveScoreboard.py (C) 2018
+NAME:    MLB-live-scoreboard.py (C) 2019
 
 PURPOSE: To produce a simple, live scoreboard to track MLB game play
          on your computer.
 
          EXAMPLE OUTPUT
 
-         Retrieving game data from MLB (2018-06-22 10:38:04)...
-         Mets @ Rockies: 2018/06/21 3:10PM
-         =========================================================================
-                     | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 8  | 9  | R  | H  | E  |
-         -------------------------------------------------------------------------
-          NYM (31-41)  1    0    1    0    0    0    0    1    1  | 4    11   0
-          COL (37-38)  3    2    0    0    0    0    0    1    x  | 6    9    0
-         -------------------------------------------------------------------------
-         Winner: Kyle Freeland (7-6), Loser: Steven Matz (3-5)
-         Final
-         =========================================================================
-         MLBLiveScoreboard, v0.02
+         Retrieving game data from MLB (07/17/2019 21:06:37)...
+         Washington Nationals @ Baltimore Orioles: 2019/07/17 7:05PM (Game #564977)
+         ===========================================================================
+          Top 3rd      | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 8  | 9  | R  | H  | E  |
+         ---------------------------------------------------------------------------
+          WSH ( 50-43 )  0    0    -                                | 0    1    0
+          BAL ( 28-66 )  0    0                                     | 0    1    0
+         ---------------------------------------------------------------------------
+         B:0 S:0 O:1| Pitcher: Brooks (4.55 ERA) - Batter: Gomes (0-0, .204 AVG)
+            [ ]     | Last play: Single - Victor Robles singles on a line drive to l
+         [ ]   [X]  | eft fielder Anthony Santander.
+            [o]     |
+         ===========================================================================
+         (C) 2018-2019 MSRoth, MLB Live Scoreboard v0.6
 
 AUTHOR:  MSRoth
 
-USAGE:   >>python mlblivescoreboard date_of_game away_team home_team game_number
+USAGE:   >python MLB-live-scoreboard.py [favorite_team] [away_team, home_team, game_date]
+         For example:
+         python MLB-live-scoreboard.py WSH
+         python MLB-live-scoreboard.py WSH PHI 04/10/2019
+
+         No arguments reads data from config.py file.
          
+         Date format:  MM/DD/YYYY   
+
+         Valid team names:
+           ARI - Arizona Diamondbacks
+           ATL - Atlanta Braves
+           BAL - Baltimore Orioles
+           BOS - Boston Red Sox
+           CHC - Chicago Cubs
+           CIN - Cincinnati Reds
+           CLE - Cleveland Indians
+           COL - Colorado Rockies
+           CWS - Chicago White Sox
+           DET - Detroit Tigers
+           HOU - Houston Astros
+           KC - Kansas City Royals
+           LAA - Los Angeles Angels
+           LAD - Los Angeles Dodgers
+           MIA - Miami Marlins
+           MIL - Milwaukee Brewers
+           MIN - Minnesota Twins
+           NYM - New York Mets
+           NYY - New York Yankees
+           OAK - Oakland Athletics
+           PHI - Philadelphia Phillies
+           PIT - Pittsburgh Pirates
+           SD - San Diego Padres
+           SEA - Seattle Mariners
+           SF - San Francisco Giants
+           STL - St. Louis Cardinals
+           TB - Tampa Bay Rays
+           TEX - Texas Rangers
+           TOR - Toronto Blue Jays
+           WSH - Washington Nationals
+   
 COMMENTS:
 
-    - this script makes use of the mlbgame package by panzarino
-      (https://github.com/panzarino/mlbgame) to retrieve and parse
-      MLB data.  Note there are a few places in this package that
-      require patching to avoid race condition errors with the data.
+    - this script uses the MLB REST API.
+    
+    - this script is very inefficient and chatty -- somethings I hope to clear up in the near future.
       
-    - this script has only been tested on Windows running Anaconda 4.1.1
-      (Python 3.5.2).
+    - this script does not have a lot of error detection and sometimes encounters a race condition with data from MLB.  
+      If that happens, just restart it and it usually clears up.
       
-    - the output for live games differs slightly than for completed games.  Live
-      games include ball, strikes, outs, bases, and commentary.
-      
-    - this is the first Python program I have ever written, so I am sure
-      there are a lot of style mistakes and use of brute force where
-      finesse is available to a more experienced programmer.
-      
+    - this script sometimes loses baserunners  (working on it).
+    
+    - this is the first Python program I have ever written, so I am sure there are a lot of style mistakes and use of brute 
+      force where finesse is available to a more experienced programmer.
+     
