@@ -5,6 +5,8 @@ import sys
 import time
 import os
 import re
+import textwrap
+
 
 """
 MLB API docs and tester
@@ -21,9 +23,11 @@ Sample games for testing
 2018-06-02 WSH ATL 1 -- 14 innings
 2018-05-18 LAD WSH 1 -- postponed
 
+09/08/2019- WSH ATL -- gamePk = 567241
+
 """
 
-VERSION = '0.6'
+VERSION = '0.7'
 COPYRIGHT = '(C) 2018-2019 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 API_BASE_URL = "http://statsapi.mlb.com/api"
@@ -61,8 +65,8 @@ def get_data(url):
         results = requests.get(url).json()
         if 'messageNumber' in results:
             sys.exit('ERROR:  {} - {}'.format(results['messageNumber'], results['message']))
-    except:
-        sys.exit('An unhandled exception occurred retrieving data from MLB.')
+    except Exception as ex:
+        sys.exit('An unhandled exception occurred retrieving data from MLB.\n' + str(ex.__cause__))
 
     return results
 
@@ -173,20 +177,24 @@ def load_game_players(game_pk):
     :return:
     """
     # only retrieve certain fields
-    fields = '?fields=teams,away,home,players,fullName,id'
+    fields = '?fields=teams,away,home,players,fullName,id,jerseyNumber'
     boxscore = get_data(API_BOXSCORE_URL.format(game_pk) + fields)
+
+    # TODO --- not tested ---  jerseyNumber
 
     # away players
     for player_id in boxscore['teams']['away']['players']:
         id = boxscore['teams']['away']['players'][str(player_id)]['person']['id']
         name = boxscore['teams']['away']['players'][str(player_id)]['person']['fullName']
-        AWAY_PLAYERS_BY_ID.update({id: name})
+        jersey = boxscore['teams']['away']['players'][str(player_id)]['jerseyNumber']
+        AWAY_PLAYERS_BY_ID.update({id: name + ' (#{})'.format(jersey)})
 
     # home players
     for player_id in boxscore['teams']['home']['players']:
         id = boxscore['teams']['home']['players'][str(player_id)]['person']['id']
         name = boxscore['teams']['home']['players'][str(player_id)]['person']['fullName']
-        HOME_PLAYERS_BY_ID.update({id: name})
+        jersey = boxscore['teams']['home']['players'][str(player_id)]['jerseyNumber']
+        HOME_PLAYERS_BY_ID.update({id: name + ' (#{})'.format(jersey)})
 
     return
 
@@ -511,9 +519,23 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
     out_lines = []
 
     # first line of output is BSO line
-    out_lines.append('{}| {}'.format(bso_line, matchup_line))
+    out_lines.append('{} | {}'.format(bso_line, matchup_line))
 
     # commentary_line += '\n' + last_pitch
+
+    # TODO --- not tested ---
+    # wrap text with textwrap module
+    # commentary_out = ''.join(textwrap.wrap(commentary_line, sb_width - len(base_runners[1])))
+    #
+    # t = max(len(commentary_out), len(base_runners))
+    # for i in range(0, t):
+    #     if i <= len(base_runners) and i <= len(commentary_out):
+    #         out_lines.append(base_runners[i] + commentary_out)
+    #     elif i < len(base_runners) and i > len(commentary_out):
+    #         out_lines.append(base_runners[i])
+    #     elif i > len(base_runners) and i < len(commentary_out):
+    #         out_lines.append((' ' * len(base_runners[1]) + commentary_out))
+    #
 
     # format commentary around diamond
     for i in range(0, len(base_runners)):
@@ -539,10 +561,11 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
     return out_lines
 
 
-def get_last_play_description(game_pk, inning_state):
+def get_last_play_description(game_pk, inning_num, inning_state):
     """
 
     :param game_pk:
+    :param inning_num:
     :param inning_state:
     :return:
     """
@@ -563,12 +586,17 @@ def get_last_play_description(game_pk, inning_state):
 
             # clean up description
             description = play_by_play['allPlays'][current_play_index]['result']['description']
+            event = play_by_play['allPlays'][current_play_index]['result']['event']
+
+            # TODO --- not tested ---
+            inning_desc = '({} {})'.format(inning_state, inning_num)
+
             re.sub(' +', ' ', description)
             re.sub('\n', ' ', description)
 
-            last_play = 'Last play: {} - {}'.format(play_by_play['allPlays'][current_play_index]['result']['event'], description)
+            last_play = 'Last play {}: {} - {}'.format(inning_desc, event, description)
 
-    except:
+    except Exception as ex:
         last_play = ''
 
     return last_play
@@ -790,13 +818,13 @@ def get_last_pitch(game_pk):
 
 def build_diamond_with_base_runners(game_pk):
     """
-
+    return list:  home = 0, first = 1, second = 2, third = 3
+    ex. runner on second:  [o][][X][]
+    home is always 'o' (for batter)
     :param game_pk:
     :return:
     """
-    # return list:  home = 0, first = 1, second = 2, third = 3
-    # ex. runner on second:  [o][][X][]
-    # home is always 'o' (for batter)
+
     bases = ['o', ' ', ' ', ' ']
     base_lines = ['', '', '']
 
@@ -806,21 +834,24 @@ def build_diamond_with_base_runners(game_pk):
 
     # the current play is the batter s subtract one to get runners before this batter
     current_play_index = int(livedata['liveData']['plays']['currentPlay']['atBatIndex']) - 1
-    runners = livedata['liveData']['plays']['allPlays'][current_play_index]['runners']
+    # runners = livedata['liveData']['plays']['allPlays'][current_play_index]['runners']
 
     # TODO fix logic?
     # work back through the last 4 plays to find runners.  If the current play did not
     # result in runner movement, the runners field will be blank, thus 'losing' and
     # runners who were on base.  4 is just a guess.
-    for p in range(current_play_index, current_play_index - 4, -1):
-        runners = livedata['liveData']['plays']['allPlays'][current_play_index]['runners']
-        if runners is not None:
-            for runner in runners:
-                if runner['movement']['isOut'] is None or runner['movement']['isOut'] is False:
-                    abase = runner['movement']['end']
-                    if abase != 'score':
-                        base_idx = int(abase[:1])
-                        bases[base_idx] = 'X'
+    # for p in range(current_play_index, current_play_index - 4, -1):
+
+    # TODO --- not tested ---
+    # removed loop.  If current play index is correct, this logic should work
+    runners = livedata['liveData']['plays']['allPlays'][current_play_index]['runners']
+    if runners is not None:
+        for runner in runners:
+            if runner['movement']['isOut'] is None or runner['movement']['isOut'] is False:
+                abase = runner['movement']['end']
+                if abase != 'score':
+                    base_idx = int(abase[:1])
+                    bases[base_idx] = 'X'
 
 
     # reformat base configuration
@@ -879,6 +910,9 @@ def format_due_up_status(commentary, due_up_batters, sb_width):
     # catch short commentary or last line of long commentary
     out_lines.append(commentary)
 
+    # TODO --- not tested ---
+    # out_lines = ''.join(textwrap(commentary, sb_width))
+
     for line in out_lines:
         formated_line += line + '\n'
 
@@ -911,7 +945,7 @@ def build_game_status_info(game_pk, sb_width):
 
         # get play commentary
         # TODO - loop if commentary longer than two lines.  See elsewhere for logic
-        commentary_line = get_last_play_description(game_pk, linescore['inningState'])
+        commentary_line = get_last_play_description(game_pk, linescore['currentInningOrdinal'], linescore['inningState'])
 
         # between innings show due up batters
         if linescore['inningState'].upper() == 'END' or linescore['inningState'].upper() == 'MIDDLE':
@@ -1176,70 +1210,76 @@ def validate_date(game_date):
 
 
 ##### MAIN #####
+def main():
 
-# Init some stuff
-load_teams()
-game_pk = 0
-home_team = ''
-away_team = ''
+    # Init some stuff
+    load_teams()
+    game_pk = 0
+    home_team = ''
+    away_team = ''
 
-# Print banner
-print(COPYRIGHT)
+    # Print banner
+    print(COPYRIGHT)
 
-# no args -- use team in config.py
-if len(sys.argv) == 1:
-    # print('DEBUG: using favorite team')
-    favorite_team = config.SB_CONFIG['team']
-    if not validate_team_name(favorite_team):
-        sys.exit('ERROR: Invalid team name found in config.py: {}'.format(favorite_team))
-    else:
-        game_pk = find_todays_gamepk(favorite_team)
+    # no args -- use team in config.py
+    if len(sys.argv) == 1:
+        # print('DEBUG: using favorite team')
+        favorite_team = config.SB_CONFIG['team']
+        if not validate_team_name(favorite_team):
+            sys.exit('ERROR: Invalid team name found in config.py: {}'.format(favorite_team))
+        else:
+            game_pk = find_todays_gamepk(favorite_team)
 
-# one arg = single team or --help
-elif len(sys.argv) == 2:
-    if sys.argv[1] == '--help':
-        print_help()
-        sys.exit(0)
-    else:
-        # print('DEBUG: single team on command line')
+    # one arg = single team or --help
+    elif len(sys.argv) == 2:
+        if sys.argv[1] == '--help':
+            print_help()
+            sys.exit(0)
+        else:
+            # print('DEBUG: single team on command line')
+            away_team = sys.argv[1]
+            if not validate_team_name(away_team):
+                sys.exit('ERROR: Invalid team name on command line: {}'.format(away_team))
+            else:
+                game_pk = find_todays_gamepk(away_team)
+
+    # full command line specs = away_team home_team game_date
+    elif len(sys.argv) == 4:
+        # print('DEBUG: full command line')
         away_team = sys.argv[1]
         if not validate_team_name(away_team):
-            sys.exit('ERROR: Invalid team name on command line: {}'.format(away_team))
-        else:
-            game_pk = find_todays_gamepk(away_team)
+            sys.exit('ERROR: Invalid away team name: {}'.format(away_team))
 
-# full command line specs = away_team home_team game_date
-elif len(sys.argv) == 4:
-    # print('DEBUG: full command line')
-    away_team = sys.argv[1]
-    if not validate_team_name(away_team):
-        sys.exit('ERROR: Invalid away team name: {}'.format(away_team))
+        home_team = sys.argv[2]
+        if not validate_team_name(home_team):
+            sys.exit('ERROR: Invalid home team name: {}'.format(home_team))
 
-    home_team = sys.argv[2]
-    if not validate_team_name(home_team):
-        sys.exit('ERROR: Invalid home team name: {}'.format(home_team))
+        game_date = sys.argv[3]
+        if not validate_date(game_date):
+            sys.exit('ERROR:  Invalid date: {}'.format(game_date))
 
-    game_date = sys.argv[3]
-    if not validate_date(game_date):
-        sys.exit('ERROR:  Invalid date: {}'.format(game_date))
+        game_pk = find_gamepk(home_team, away_team, game_date)
 
-    game_pk = find_gamepk(home_team, away_team, game_date)
+    # else gather data interactively from user
+    else:
+        # home_team, away_team, game_date = get_user_inputs()
+        # game_pk = find_gamepk(away_team, home_team, game_date)
+        print_help()
 
-# else gather data interactively from user
-else:
-    # home_team, away_team, game_date = get_user_inputs()
-    # game_pk = find_gamepk(away_team, home_team, game_date)
-    print_help()
-
-# run scoreboard if gamepk found
-if game_pk != 0:
-    run_scoreboard(game_pk)
-
-else:
-    if home_team != '' and away_team != '':
-        print('No game found for {} at {} on {}'.format(away_team, home_team, game_date))
+    # run scoreboard if gamepk found
+    if game_pk != 0:
+        run_scoreboard(game_pk)
 
     else:
-        print('{} has no scheduled game today.'.format(config.SB_CONFIG['team']))
+        if home_team != '' and away_team != '':
+            print('\nNo game found for {} at {} on {}'.format(away_team, home_team, game_date))
+
+        else:
+            print('\n{} has no scheduled game today.'.format(config.SB_CONFIG['team']))
+
+
+if __name__ == "__main__":
+    main()
+
 
 # <SDG><
