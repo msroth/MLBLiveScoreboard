@@ -521,20 +521,18 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
     # first line of output is BSO line
     out_lines.append('{} | {}'.format(bso_line, matchup_line))
 
-    # commentary_line += '\n' + last_pitch
-
     # TODO --- not tested ---
     # wrap text with textwrap module
-    # commentary_out = ''.join(textwrap.wrap(commentary_line, sb_width - len(base_runners[1])))
+    commentary_out = ''.join(textwrap.wrap(commentary_line, sb_width - len(base_runners[1])))
 
     t = max(len(commentary_out), len(base_runners))
     for i in range(0, t):
         if i <= len(base_runners) and i <= len(commentary_out):
-            out_lines.append(base_runners[i] + commentary_out)
+            out_lines.append(base_runners[i] + commentary_out[i])
         elif i < len(base_runners) and i > len(commentary_out):
             out_lines.append(base_runners[i])
         elif i > len(base_runners) and i < len(commentary_out):
-            out_lines.append((' ' * len(base_runners[1]) + commentary_out))
+            out_lines.append((' ' * len(base_runners[1]) + '|' + commentary_out[i]))
 
     # format commentary around diamond
     # for i in range(0, len(base_runners)):
@@ -555,7 +553,7 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
     #     commentary_line = commentary_line[sb_width:]
 
     # append last pitch info
-    out_lines.append('             {}'.format(last_pitch.strip()))
+    out_lines.append(last_pitch)
 
     return out_lines
 
@@ -583,11 +581,12 @@ def get_last_play_description(game_pk, inning_num, inning_state):
             if inning_state.upper() != 'MIDDLE' and inning_state.upper() != 'END':
                 current_play_index -= 1
 
-            # clean up description
+            # build commentary
             description = play_by_play['allPlays'][current_play_index]['result']['description']
             event = play_by_play['allPlays'][current_play_index]['result']['event']
 
             # TODO --- not tested ---
+            # add inning to commentary
             inning_desc = '({} {})'.format(inning_state, inning_num)
 
             re.sub(' +', ' ', description)
@@ -596,6 +595,8 @@ def get_last_play_description(game_pk, inning_num, inning_state):
             last_play = 'Last play {}: {} - {}'.format(inning_desc, event, description)
 
     except Exception as ex:
+        # sometimes there is a race condition and these fields don't exist yet.
+        # just return blank string and pick up the commentary on the next refresh.
         last_play = ''
 
     return last_play
