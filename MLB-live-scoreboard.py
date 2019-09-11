@@ -65,8 +65,8 @@ def get_data(url):
         results = requests.get(url).json()
         if 'messageNumber' in results:
             sys.exit('ERROR:  {} - {}'.format(results['messageNumber'], results['message']))
-    except Exception as ex:
-        sys.exit('An unhandled exception occurred retrieving data from MLB.\n' + str(ex.__cause__))
+    except:
+        sys.exit('An unhandled exception occurred retrieving data from MLB.\n')
 
     return results
 
@@ -526,24 +526,23 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
     # TODO --- not tested ---
     # wrap text with textwrap module
     # commentary_out = ''.join(textwrap.wrap(commentary_line, sb_width - len(base_runners[1])))
-    #
-    # t = max(len(commentary_out), len(base_runners))
-    # for i in range(0, t):
-    #     if i <= len(base_runners) and i <= len(commentary_out):
-    #         out_lines.append(base_runners[i] + commentary_out)
-    #     elif i < len(base_runners) and i > len(commentary_out):
-    #         out_lines.append(base_runners[i])
-    #     elif i > len(base_runners) and i < len(commentary_out):
-    #         out_lines.append((' ' * len(base_runners[1]) + commentary_out))
-    #
+
+    t = max(len(commentary_out), len(base_runners))
+    for i in range(0, t):
+        if i <= len(base_runners) and i <= len(commentary_out):
+            out_lines.append(base_runners[i] + commentary_out)
+        elif i < len(base_runners) and i > len(commentary_out):
+            out_lines.append(base_runners[i])
+        elif i > len(base_runners) and i < len(commentary_out):
+            out_lines.append((' ' * len(base_runners[1]) + commentary_out))
 
     # format commentary around diamond
-    for i in range(0, len(base_runners)):
-        if len(commentary_line) > 0:
-            out_lines.append(base_runners[i] + commentary_line[:(sb_width - len(base_runners[i]))])
-            commentary_line = commentary_line[(sb_width - len(base_runners[i])):]
-        else:
-            out_lines.append(base_runners[i])
+    # for i in range(0, len(base_runners)):
+    #     if len(commentary_line) > 0:
+    #         out_lines.append(base_runners[i] + commentary_line[:(sb_width - len(base_runners[i]))])
+    #         commentary_line = commentary_line[(sb_width - len(base_runners[i])):]
+    #     else:
+    #         out_lines.append(base_runners[i])
 
         # if commentary does not take up all the lines needed for the diamond, break here
         # so last pitch info will go here
@@ -551,9 +550,9 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
         #    break
 
     # format any remaining commentary lines
-    while len(commentary_line) > sb_width:
-        out_lines.append(commentary_line[:sb_width])
-        commentary_line = commentary_line[sb_width:]
+    # while len(commentary_line) > sb_width:
+    #     out_lines.append(commentary_line[:sb_width])
+    #     commentary_line = commentary_line[sb_width:]
 
     # append last pitch info
     out_lines.append('             {}'.format(last_pitch.strip()))
