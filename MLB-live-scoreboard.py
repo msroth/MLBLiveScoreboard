@@ -523,16 +523,17 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
 
     # TODO --- not tested ---
     # wrap text with textwrap module
-    commentary_out = ''.join(textwrap.wrap(commentary_line, sb_width - len(base_runners[1])))
+    commentary_out = textwrap.wrap(commentary_line, sb_width - len(base_runners[1]))
 
     t = max(len(commentary_out), len(base_runners))
     for i in range(0, t):
-        if i <= len(base_runners) and i <= len(commentary_out):
+        if i <= len(base_runners) - 1 and i <= len(commentary_out) - 1:
             out_lines.append(base_runners[i] + commentary_out[i])
-        elif i < len(base_runners) and i > len(commentary_out):
+        elif i <= len(base_runners) - 1 and i > len(commentary_out) - 1:
             out_lines.append(base_runners[i])
-        elif i > len(base_runners) and i < len(commentary_out):
-            out_lines.append((' ' * len(base_runners[1]) + '|' + commentary_out[i]))
+        elif i > len(base_runners) - 1 and i <= len(commentary_out) - 1:
+            out_lines.append((' ' * len(base_runners[1]) + ' | ' + commentary_out[i]))
+
 
     # format commentary around diamond
     # for i in range(0, len(base_runners)):
@@ -855,9 +856,9 @@ def build_diamond_with_base_runners(game_pk):
 
 
     # reformat base configuration
-    base_lines[0] = '   [' + bases[2] + ']     | '
-    base_lines[1] = '[' + bases[3] + ']   [' + bases[1] + ']  | '
-    base_lines[2] = '   [' + bases[0] + ']     | '
+    base_lines[0] = '    [' + bases[2] + ']     | '
+    base_lines[1] = ' [' + bases[3] + ']   [' + bases[1] + ']  | '
+    base_lines[2] = '    [' + bases[0] + ']     | '
 
     return base_lines
 
