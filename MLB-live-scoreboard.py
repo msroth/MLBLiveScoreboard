@@ -801,18 +801,21 @@ def get_last_pitch(game_pk):
     # only retrieve certain fields
     fields = '?fields=currentPlay,playEvents,details,type,description,pitchData,endSpeed,pitchNumber'
     play_by_play = get_data(API_PLAYBYPLAY_URL.format(game_pk) + fields)
-    result = 'Last pitch: {} - {} MPH'
+    result = 'Last pitch: #{} {} ({} MPH) - {}'
 
     # TODO - not sure this returns the last pitch.  It doesn't line up with TV
+    # note:  endspeed is different than startspeed.  I suspect the TV reports
+    #        startspeed.
     try:
         events = play_by_play['currentPlay']['playEvents']
         last_event = len(events) - 1
         # for event in events:
-        type_of_pitch = events[last_event]['details']['type']['description']
-        speed_of_pitch = events[last_event]['pitchData']['endSpeed']
-        # pitch_number = events[last_event]['pitchNumber']
+        pitch_type = events[last_event]['details']['type']['description']
+        pitch_speed = events[last_event]['pitchData']['endSpeed']
+        pitch_result = events[last_event]['details']['description']
+        pitch_number = events[last_event]['pitchNumber']
 
-        return result.format(type_of_pitch, speed_of_pitch)
+        return result.format(pitch_number, pitch_type, pitch_speed, pitch_result)
     except:
         return ''
 
