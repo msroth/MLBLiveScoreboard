@@ -532,7 +532,7 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
         elif i <= len(base_runners) - 1 and i > len(commentary_out) - 1:
             out_lines.append(base_runners[i])
         elif i > len(base_runners) - 1 and i <= len(commentary_out) - 1:
-            out_lines.append((' ' * len(base_runners[1]) + ' | ' + commentary_out[i]))
+            out_lines.append((' ' * len(base_runners[0]) - 2 + '| ' + commentary_out[i]))
 
 
     # format commentary around diamond
