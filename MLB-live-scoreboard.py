@@ -1279,7 +1279,7 @@ def main():
             print('\nNo game found for {} at {} on {}'.format(away_team, home_team, game_date))
 
         else:
-            print('\n{} has no scheduled game today.'.format(config.SB_CONFIG['team']))
+            print('\n{} has no scheduled game today.'.format(away_team))
 
 
 if __name__ == "__main__":
