@@ -30,8 +30,8 @@ https://realpython.com/python-data-classes/
 
 """
 
-VERSION = '0.71'
-COPYRIGHT = '(C) 2018-2019 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
+VERSION = '0.72'
+COPYRIGHT = '(C) 2018-2020 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 API_BASE_URL = "http://statsapi.mlb.com/api"
 API_BOXSCORE_URL = API_BASE_URL + "/v1/game/{}/boxscore"
