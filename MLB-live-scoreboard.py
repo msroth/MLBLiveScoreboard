@@ -25,9 +25,12 @@ Sample games for testing
 
 09/08/2019- WSH ATL -- gamePk = 567241
 
+DataClass
+https://realpython.com/python-data-classes/
+
 """
 
-VERSION = '0.7'
+VERSION = '0.71'
 COPYRIGHT = '(C) 2018-2019 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 API_BASE_URL = "http://statsapi.mlb.com/api"
@@ -63,11 +66,8 @@ def get_data(url):
     """
     try:
         results = requests.get(url).json()
-        if 'messageNumber' in results:
-            sys.exit('ERROR:  {} - {}'.format(results['messageNumber'], results['message']))
-    except:
-        sys.exit('An unhandled exception occurred retrieving data from MLB.\n')
-
+    except Exception as err:
+        sys.exit('An unhandled exception occurred retrieving data from MLB.\n{}'.format(err))
     return results
 
 
@@ -179,8 +179,6 @@ def load_game_players(game_pk):
     # only retrieve certain fields
     fields = '?fields=teams,away,home,players,fullName,id,jerseyNumber'
     boxscore = get_data(API_BOXSCORE_URL.format(game_pk) + fields)
-
-    # TODO --- not tested ---  jerseyNumber
 
     # away players
     for player_id in boxscore['teams']['away']['players']:
@@ -456,7 +454,7 @@ def build_dueup_batters_line(game_pk, inning_half):
     :return:
     """
 
-    # TODO - this does not return the correct batters
+    # TODO - this does not always return the correct batters
 
     # make sure to use global batter indexes
     global HOME_CURRENT_BATTER_IDX
@@ -521,7 +519,6 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
     # first line of output is BSO line
     out_lines.append('{} | {}'.format(bso_line, matchup_line))
 
-    # TODO --- not tested ---
     # wrap text with textwrap module
     commentary_out = textwrap.wrap(commentary_line, sb_width - len(base_runners[1]))
 
@@ -533,25 +530,6 @@ def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, comme
             out_lines.append(base_runners[i])
         elif i > len(base_runners) - 1 and i <= len(commentary_out) - 1:
             out_lines.append(' ' * (len(base_runners[0]) - 2) + '| ' + commentary_out[i])
-
-
-    # format commentary around diamond
-    # for i in range(0, len(base_runners)):
-    #     if len(commentary_line) > 0:
-    #         out_lines.append(base_runners[i] + commentary_line[:(sb_width - len(base_runners[i]))])
-    #         commentary_line = commentary_line[(sb_width - len(base_runners[i])):]
-    #     else:
-    #         out_lines.append(base_runners[i])
-
-        # if commentary does not take up all the lines needed for the diamond, break here
-        # so last pitch info will go here
-        # if len(commentary_line) == 0:
-        #    break
-
-    # format any remaining commentary lines
-    # while len(commentary_line) > sb_width:
-    #     out_lines.append(commentary_line[:sb_width])
-    #     commentary_line = commentary_line[sb_width:]
 
     # append last pitch info
     out_lines.append(last_pitch)
@@ -586,7 +564,6 @@ def get_last_play_description(game_pk, inning_num, inning_state):
             description = play_by_play['allPlays'][current_play_index]['result']['description']
             event = play_by_play['allPlays'][current_play_index]['result']['event']
 
-            # TODO --- not tested ---
             # add inning to commentary
             inning_desc = '({} {})'.format(inning_state, inning_num)
 
@@ -842,7 +819,7 @@ def build_diamond_with_base_runners(game_pk):
 
     # TODO fix logic?
     # work back through the last 4 plays to find runners.  If the current play did not
-    # result in runner movement, the runners field will be blank, thus 'losing' and
+    # result in runner movement, the runners field will be blank, thus 'losing' the
     # runners who were on base.  4 is just a guess.
     # for p in range(current_play_index, current_play_index - 4, -1):
 
@@ -948,13 +925,11 @@ def build_game_status_info(game_pk, sb_width):
         linescore = get_data(API_LINESCORE_URL.format(game_pk) + fields)
 
         # get play commentary
-        # TODO - loop if commentary longer than two lines.  See elsewhere for logic
         commentary_line = get_last_play_description(game_pk, linescore['currentInningOrdinal'], linescore['inningState'])
 
         # between innings show due up batters
         if linescore['inningState'].upper() == 'END' or linescore['inningState'].upper() == 'MIDDLE':
             due_up_batters = build_dueup_batters_line(game_pk, linescore['inningState'])
-            # status_line = commentary_line + due_up_batters
             status_line = format_due_up_status(commentary_line, due_up_batters, sb_width)
 
         else:
