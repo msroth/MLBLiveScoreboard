@@ -30,7 +30,7 @@ https://realpython.com/python-data-classes/
 
 """
 
-VERSION = '0.72'
+VERSION = '0.73'
 COPYRIGHT = '(C) 2018-2020 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 API_BASE_URL = "http://statsapi.mlb.com/api"
@@ -918,7 +918,7 @@ def build_game_status_info(game_pk, sb_width):
     game_status = get_game_status(game_pk)
 
     if game_status.upper() != 'FINAL' and game_status.upper() != 'GAME OVER' and game_status.upper() != 'SCHEDULED' and \
-            game_status.upper() != 'WARMUP' and game_status.upper() != 'PRE-GAME':
+            game_status.upper() != 'WARMUP' and game_status.upper() != 'PRE-GAME' and  game_status.upper() != 'POSTPONED':
 
         # get game status
         fields = '?fields=currentInningOrdinal,inningHalf,inningState'
@@ -972,9 +972,16 @@ def build_game_status_info(game_pk, sb_width):
     elif game_status.upper() == 'FINAL' or game_status.upper() == 'GAME OVER':
         status_line = '{}\n{}'.format(build_win_lose_pitcher_line(game_pk), game_status)
 
-    # scheduled or warmup
+    # scheduled or warmup or some other delay
     elif game_status.upper() == 'SCHEDULED' or game_status.upper() == 'WARMUP' or game_status.upper() == 'PRE-GAME':
         status_line = '{}\n{}'.format(build_sched_pitchers_line(game_pk), game_status)
+
+    elif game_status.upper() == 'POSTPONED':
+        note = get_game_note(game_pk)
+        if len(note) > 0:
+            status_line = '{}: {}'.format(game_status, note)
+        else:
+            status_line = game_status
 
     # unknown status occurred
     else:
@@ -1107,16 +1114,21 @@ def run_scoreboard(game_pk):
         # then set loop condition based on game_status
 
         # Game over
-        if game_status.upper() == 'FINAL' or game_status.upper() == 'GAME OVER':
-            if game_status.upper() == 'GAME OVER':
-                end_loop = False
-            else:
-                end_loop = True
+        if game_status.upper() == 'GAME OVER':
+            end_loop = False
+
+        if game_status.upper() == 'FINAL':
+            end_loop = True
+
+        if  game_status.upper() == 'POSTPONED':
+            end_loop = True
 
         # Game not started
-        if game_status.upper() == 'SCHEDULED' or game_status.upper() == 'WARMUP':
-            if game_status.upper() == 'SCHEDULED':
-                end_loop = True
+        if game_status.upper() == 'WARMUP':
+            end_loop = False
+
+        if game_status.upper() == 'SCHEDULED':
+            end_loop = True
 
         # any other not 'in progress' state
         if game_status.upper() != 'IN PROGRESS':
