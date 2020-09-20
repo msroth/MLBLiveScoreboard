@@ -30,7 +30,7 @@ https://realpython.com/python-data-classes/
 
 """
 
-VERSION = '0.73'
+VERSION = '0.74'
 COPYRIGHT = '(C) 2018-2020 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 API_BASE_URL = "http://statsapi.mlb.com/api"
@@ -570,7 +570,9 @@ def get_last_play_description(game_pk, inning_num, inning_state):
             re.sub(' +', ' ', description)
             re.sub('\n', ' ', description)
 
-            last_play = 'Last play {}: {} - {}'.format(inning_desc, event, description)
+            # This gets confusing because the inning is the current inning, not the inning of the last play
+            # last_play = 'Last play {}: {} - {}'.format(inning_desc, event, description)
+            last_play = 'Last play {} - {}'.format(event, description)
 
     except Exception as ex:
         # sometimes there is a race condition and these fields don't exist yet.
@@ -865,6 +867,7 @@ def build_sched_pitchers_line(game_pk):
     # use id to get record and ERA
     away_pitcher_stats = get_pitcher_stats(game_pk, away_pitcher_id)
     home_pitcher_stats = get_pitcher_stats(game_pk, home_pitcher_id)
+
 
     return '{} ({}-{}, {} ERA) vs. {} ({}-{}, {} ERA)'.format(away_pitcher_name, away_pitcher_stats[0],
                                                               away_pitcher_stats[1], away_pitcher_stats[2],
