@@ -6,6 +6,7 @@ import time
 import os
 import re
 import textwrap
+import argparse
 
 
 """
@@ -30,8 +31,8 @@ https://realpython.com/python-data-classes/
 
 """
 
-VERSION = '0.74'
-COPYRIGHT = '(C) 2018-2020 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
+VERSION = '0.75'
+COPYRIGHT = '(C) 2018-2021 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 API_BASE_URL = "http://statsapi.mlb.com/api"
 API_BOXSCORE_URL = API_BASE_URL + "/v1/game/{}/boxscore"
@@ -285,8 +286,11 @@ def get_game_date_time(game_pk):
     fields = '?fields=gameData,datetime,originalDate,time,ampm'
     livefeed = get_data(API_LIVEFEED_URL.format(game_pk) + fields)
 
-    game_date = str(livefeed['gameData']['datetime']['originalDate']).replace('-', '/')
-    game_time = livefeed['gameData']['datetime']['time'] + livefeed['gameData']['datetime']['ampm']
+    try:
+        game_date = str(livefeed['gameData']['datetime']['originalDate']).replace('-', '/')
+        game_time = livefeed['gameData']['datetime']['time'] + livefeed['gameData']['datetime']['ampm']
+    except Exception as ex:
+        return ''
 
     # return game date with time
     return '{} {}'.format(game_date, game_time)
@@ -621,23 +625,26 @@ def get_batter_stats(game_pk, batter_id):
     fields = '?fields=teams,home,away,players,stats,batting,hits,atBats,seasonStats,avg'
     batter_stats = get_data(API_BOXSCORE_URL.format(game_pk) + fields)
 
-    # away
-    for player in batter_stats['teams']['away']['players']:
-        if player == 'ID' + str(batter_id):
-            stats[1] = batter_stats['teams']['away']['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
-            stats[0] = batter_stats['teams']['away']['players']['ID' + str(batter_id)]['stats']['batting']['hits']
-            stats[2] = batter_stats['teams']['away']['players']['ID' + str(batter_id)]['seasonStats']['batting']['avg']
-            break
-
-    # home
-    if stats[1] == '':
-        for player in batter_stats['teams']['home']['players']:
+    try:
+        # away
+        for player in batter_stats['teams']['away']['players']:
             if player == 'ID' + str(batter_id):
-                stats[1] = batter_stats['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
-                stats[0] = batter_stats['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting']['hits']
-                stats[2] = batter_stats['teams']['home']['players']['ID' + str(batter_id)]['seasonStats']['batting'][
-                    'avg']
+                stats[1] = batter_stats['teams']['away']['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
+                stats[0] = batter_stats['teams']['away']['players']['ID' + str(batter_id)]['stats']['batting']['hits']
+                stats[2] = batter_stats['teams']['away']['players']['ID' + str(batter_id)]['seasonStats']['batting']['avg']
                 break
+
+        # home
+        if stats[1] == '':
+            for player in batter_stats['teams']['home']['players']:
+                if player == 'ID' + str(batter_id):
+                    stats[1] = batter_stats['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
+                    stats[0] = batter_stats['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting']['hits']
+                    stats[2] = batter_stats['teams']['home']['players']['ID' + str(batter_id)]['seasonStats']['batting'][
+                        'avg']
+                    break
+    except Exception as ex:
+        stats = ['', '', '']
 
     return stats
 
@@ -795,7 +802,7 @@ def get_last_pitch(game_pk):
         pitch_number = events[last_event]['pitchNumber']
 
         return result.format(pitch_number, pitch_type, pitch_speed, pitch_result)
-    except:
+    except Exception as ex:
         return ''
 
 
@@ -855,24 +862,27 @@ def build_sched_pitchers_line(game_pk):
     fields = '?fields=gameData,probablePitchers,away,fullName,id,home'
     livedata = get_data(API_LIVEFEED_URL.format(game_pk) + fields)
 
-    away_pitcher_name = livedata['gameData']['probablePitchers']['away']['fullName']
-    away_pitcher_name = '{} {}'.format(str(away_pitcher_name.split(',')[1]).strip(),
-                                       str(away_pitcher_name.split(',')[0]).strip())
-    away_pitcher_id = livedata['gameData']['probablePitchers']['away']['id']
-    home_pitcher_name = livedata['gameData']['probablePitchers']['home']['fullName']
-    home_pitcher_name = '{} {}'.format(str(home_pitcher_name.split(',')[1]).strip(),
-                                       str(home_pitcher_name.split(',')[0]).strip())
-    home_pitcher_id = livedata['gameData']['probablePitchers']['home']['id']
+    try:
+        away_pitcher_name = livedata['gameData']['probablePitchers']['away']['fullName']
+        away_pitcher_name = '{} {}'.format(str(away_pitcher_name.split(',')[1]).strip(),
+                                           str(away_pitcher_name.split(',')[0]).strip())
+        away_pitcher_id = livedata['gameData']['probablePitchers']['away']['id']
+        home_pitcher_name = livedata['gameData']['probablePitchers']['home']['fullName']
+        home_pitcher_name = '{} {}'.format(str(home_pitcher_name.split(',')[1]).strip(),
+                                           str(home_pitcher_name.split(',')[0]).strip())
+        home_pitcher_id = livedata['gameData']['probablePitchers']['home']['id']
 
-    # use id to get record and ERA
-    away_pitcher_stats = get_pitcher_stats(game_pk, away_pitcher_id)
-    home_pitcher_stats = get_pitcher_stats(game_pk, home_pitcher_id)
+        # use id to get record and ERA
+        away_pitcher_stats = get_pitcher_stats(game_pk, away_pitcher_id)
+        home_pitcher_stats = get_pitcher_stats(game_pk, home_pitcher_id)
 
 
-    return '{} ({}-{}, {} ERA) vs. {} ({}-{}, {} ERA)'.format(away_pitcher_name, away_pitcher_stats[0],
-                                                              away_pitcher_stats[1], away_pitcher_stats[2],
-                                                              home_pitcher_name, home_pitcher_stats[0],
-                                                              home_pitcher_stats[1], home_pitcher_stats[2])
+        return '{} ({}-{}, {} ERA) vs. {} ({}-{}, {} ERA)'.format(away_pitcher_name, away_pitcher_stats[0],
+                                                                  away_pitcher_stats[1], away_pitcher_stats[2],
+                                                                  home_pitcher_name, home_pitcher_stats[0],
+                                                                  home_pitcher_stats[1], home_pitcher_stats[2])
+    except Exception as ex:
+        return ''
 
 
 def format_due_up_status(commentary, due_up_batters, sb_width):
@@ -1199,81 +1209,89 @@ def validate_date(game_date):
         datetime.datetime(int(year), int(month), int(day))
     except ValueError:
         return False
-
     return True
 
 
 ##### MAIN #####
-def main():
-
-    # Init some stuff
-    load_teams()
-    game_pk = 0
-    home_team = ''
-    away_team = ''
+if __name__ == "__main__":
 
     # Print banner
     print(COPYRIGHT)
 
+    # Init some stuff
+    load_teams()
+    game_pk = 0
+    favorite_team = None
+
+    # parser = argparse.ArgumentParser(epilog='Team Tri-graphs: ' + str(list(TEAM_NAMES_BY_ABBREV.keys())))
+    # subparsers = parser.add_subparsers()
+    #
+    # team = subparsers.add_parser('--team', help='Tri-graph for favorite team.')
+    # team.add_argument('--team', dest='favorite_team')
+    #
+    # full_args = subparsers.add_parser('--home --away --date', help='Tri-graph for home team, Tri-graph for away team, Date of game MM/DD/YYYY.')
+    # full_args.add_argument('--home', dest='home_team', action='store')
+    # full_args.add_argument('--away', dest='away_team', action='store')
+    # full_args.add_argument('--date', dest='game_date', action='store')
+    #
+    # args = parser.parse_args()
+
+
+    parser = argparse.ArgumentParser(description='Use --team to load current game for your favorite team, or ' +
+                                                 'combination of --away, --home, and --date to load a specific game',
+                                     epilog='examples: >python MLB-live-scoreboard.py --team=WSH\n' +
+                                     '          >python MLB-live-scoreboard.py --away=WSH --home=PHI --date=04/10/2019')
+    parser.add_argument('--team', required=False, choices=TEAM_NAMES_BY_ABBREV.keys(), dest='favorite_team',
+                        help='Tri-graph for favorite team.')
+    parser.add_argument('--away', required=False, choices=TEAM_NAMES_BY_ABBREV.keys(), dest='away_team',
+                        help='Tri-graph for away team.')
+    parser.add_argument('--home', required=False, choices=TEAM_NAMES_BY_ABBREV.keys(), dest='home_team',
+                        help='Tri-graph for home team.')
+    parser.add_argument('--date', required=False, dest='game_date', help='Date of game MM/DD/YYYY.')
+    args = parser.parse_args()
+
+
     # no args -- use team in config.py
     if len(sys.argv) == 1:
-        # print('DEBUG: using favorite team')
         favorite_team = config.SB_CONFIG['team']
         if not validate_team_name(favorite_team):
             sys.exit('ERROR: Invalid team name found in config.py: {}'.format(favorite_team))
         else:
             game_pk = find_todays_gamepk(favorite_team)
 
-    # one arg = single team or --help
-    elif len(sys.argv) == 2:
-        if sys.argv[1] == '--help':
-            print_help()
-            sys.exit(0)
+    # use favorite team arg
+    elif args.favorite_team is not None:
+        if not validate_team_name(args.favorite_team):
+            sys.exit('ERROR: Invalid favorite team name: {}'.format(args.favorite_team))
         else:
-            # print('DEBUG: single team on command line')
-            away_team = sys.argv[1]
-            if not validate_team_name(away_team):
-                sys.exit('ERROR: Invalid team name on command line: {}'.format(away_team))
-            else:
-                game_pk = find_todays_gamepk(away_team)
+            game_pk = find_todays_gamepk(args.favorite_team)
+            favorite_team = args.favorite_team
 
-    # full command line specs = away_team home_team game_date
-    elif len(sys.argv) == 4:
-        # print('DEBUG: full command line')
-        away_team = sys.argv[1]
-        if not validate_team_name(away_team):
-            sys.exit('ERROR: Invalid away team name: {}'.format(away_team))
+    # use full command line
+    elif args.away_team is not None and args.home_team is not None and args.game_date is not None:
+        if not validate_team_name(args.away_team):
+            sys.exit('ERROR: Invalid away team name: {}'.format(args.away_team))
 
-        home_team = sys.argv[2]
-        if not validate_team_name(home_team):
-            sys.exit('ERROR: Invalid home team name: {}'.format(home_team))
+        if not validate_team_name(args.home_team):
+            sys.exit('ERROR: Invalid home team name: {}'.format(args.home_team))
 
-        game_date = sys.argv[3]
-        if not validate_date(game_date):
-            sys.exit('ERROR:  Invalid date: {}'.format(game_date))
+        if not validate_date(args.game_date):
+            sys.exit('ERROR:  Invalid date: {}'.format(args.game_date))
 
-        game_pk = find_gamepk(home_team, away_team, game_date)
+        game_pk = find_gamepk(args.home_team, args.away_team, args.game_date)
 
-    # else gather data interactively from user
     else:
-        # home_team, away_team, game_date = get_user_inputs()
-        # game_pk = find_gamepk(away_team, home_team, game_date)
-        print_help()
+        parser.print_usage()
 
     # run scoreboard if gamepk found
     if game_pk != 0:
         run_scoreboard(game_pk)
-
     else:
-        if home_team != '' and away_team != '':
-            print('\nNo game found for {} at {} on {}'.format(away_team, home_team, game_date))
-
+        if args.home_team is not None and args.away_team is not None and args.game_date:
+            print('\nNo game found for {} at {} on {}'.format(args.away_team, args.home_team, args.game_date))
+        elif favorite_team is not None:
+            print('\n{} has no scheduled game today.'.format(favorite_team))
         else:
-            print('\n{} has no scheduled game today.'.format(away_team))
-
-
-if __name__ == "__main__":
-    main()
-
+            print('\nSomething went wrong.')
 
 # <SDG><
