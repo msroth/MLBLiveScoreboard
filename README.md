@@ -1,7 +1,7 @@
 # MLBLiveScoreboard
 Python script to print live MLB game scoreboards to console
 
-NAME:    MLB-live-scoreboard.py (C) 2019
+NAME:    MLB-live-scoreboard.py (C) 2019 - 2021
 
 PURPOSE: To produce a simple, live scoreboard to track MLB game play
          on your computer.
