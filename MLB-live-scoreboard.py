@@ -882,7 +882,7 @@ def build_sched_pitchers_line(game_pk):
                                                                   home_pitcher_name, home_pitcher_stats[0],
                                                                   home_pitcher_stats[1], home_pitcher_stats[2])
     except Exception as ex:
-        return ''
+        return 'TBD vs. TBD'
 
 
 def format_due_up_status(commentary, due_up_batters, sb_width):
