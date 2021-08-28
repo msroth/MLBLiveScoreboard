@@ -37,11 +37,11 @@ class MLB_API:
         schedule_data = self.get_data(self.API_SCHEDULE_URL.format(game_date) + fields)
         return schedule_data
 
-    def get_player_data(self, game_pk):
-        # only retrieve certain fields
-        fields = '?fields=teams,away,home,players,fullName,id,jerseyNumber'
-        player_data = self.get_data(self.API_BOXSCORE_URL.format(game_pk) + fields)
-        return player_data
+    # def get_player_data(self, game_pk):
+    #     # only retrieve certain fields
+    #     fields = '?fields=teams,away,home,players,fullName,id,jerseyNumber'
+    #     player_data = self.get_data(self.API_BOXSCORE_URL.format(game_pk) + fields)
+    #     return player_data
 
     def get_home_away_team_id(self, game_pk):
         # only retrieve certain fields

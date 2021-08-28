@@ -10,8 +10,6 @@ import configparser
 import mlb_api
 import mlb_data
 
-
-
 """
 MLB API docs and tester
 http://statsapi-default-elb-prod-876255662.us-east-1.elb.amazonaws.com/docs/#!
@@ -46,7 +44,6 @@ GAME_STATUS_ENDED = ['GAME OVER', 'FINAL', 'POSTPONED']
 GAME_STATUS_RUNNING = ['IN PROGRESS']
 GAME_STATUS_NOT_STARTED = ['SCHEDULED', 'WARMUP', 'PRE-GAME']
 GAME_STATUS_DELAYED = ['DELAYED']
-
 
 
 class MLBLiveScoreboard:
@@ -138,36 +135,42 @@ class MLBLiveScoreboard:
     def load_game_data(self, game_pk):
         self.game_pk = game_pk
 
-        self.scoreboard_data.load_game_data(game_pk)
-
         # load stats data
         self.refresh_live_data()
 
-    def process_subs(self):
-
-        # TODO
-        # put subs into dict
-
-        # update batting order with subs
-        # TODO - figure out this logic
-        # boxscore has player and player replace
-        boxscore = self.get_boxscore_data()
-        if 'player' in boxscore and 'playerReplaced' in boxscore:
-            a = 1
-
-
-        #self.scoreboard_data.process_subs(dict)
+        # load game data
+        self.scoreboard_data.load_game_data(game_pk)
 
 
 
-    def set_batting_order(self):
-        self.scoreboard_data.set_batting_order()
+    # def process_subs(self, inning_half):
+    #
+    #     # TODO - not tested
+    #     home_away = 'away'
+    #     if inning_half == 'bottom':
+    #         home_away = 'home'
+    #
+    #     # update batting order with subs
+    #     boxscore = self.get_boxscore_data()
+    #     if 'player' in boxscore and 'playerReplaced' in boxscore:
+    #         players = boxscore['teams'][home_away]['players']
+    #         player_replaced = boxscore['teams'][home_away]['playerReplaced']
+    #         for i in range(len(players)):
+    #             player_id = players[i]['id']
+    #             player_replaced_id = player_replaced[i]['id']
+    #             self.update_batting_order(player_id, player_replaced_id)
+
+    # def update_batting_order(self, player_id, player_replaced_id):
+    #     self.scoreboard_data.update_batting_order(player_id, player_replaced_id)
+
+    # def set_batting_order(self):
+    #     self.scoreboard_data.set_batting_order()
 
     def get_game_status(self):
         return self.scoreboard_data.get_game_status()
 
     def refresh_live_data(self):
-        self.scoreboard_data.refresh_live_data(self.game_pk)
+        return self.scoreboard_data.refresh_live_data(self.game_pk)
 
     def get_current_inning_half(self):
         return self.scoreboard_data.get_current_inning_half()
@@ -222,15 +225,16 @@ class MLBLiveScoreboard:
         # return away and home team RHE as lists
         return away_team_rhe, home_team_rhe
 
-    def clear_screen(self):
+    @staticmethod
+    def clear_screen():
         # Try to clear the screen between each redraw of scoreboard
         if os.name.upper() == 'NT':
             os.system('cls')
         else:
             print('\n\n\n\n\n')
-        return
 
-    def format_due_up_status(self, commentary, due_up_batters, sb_width):
+    @staticmethod
+    def format_due_up_status(commentary, due_up_batters, sb_width):
         """
         Format commentary so it doesn't extend past width of scoreboard
         :param commentary:
@@ -264,7 +268,6 @@ class MLBLiveScoreboard:
         """
         Build string containing current balls, strikes, and outs
 
-        :param game_pk:
         :return:
         """
         # linescore = self.get_linescore_data()
@@ -278,7 +281,6 @@ class MLBLiveScoreboard:
     def get_pitcher_stats(self, pitcher_id):
         """
 
-        :param game_pk:
         :param pitcher_id:
         :return:
         """
@@ -327,7 +329,6 @@ class MLBLiveScoreboard:
     def build_sched_pitchers_line(self):
         """
 
-        :param game_pk:
         :return:
         """
         # only retrieve certain fields
@@ -358,7 +359,6 @@ class MLBLiveScoreboard:
     def build_win_lose_pitcher_line(self):
         """
 
-        :param game_pk:
         :return:
         """
 
@@ -379,9 +379,7 @@ class MLBLiveScoreboard:
     def format_status_lines_with_diamond(self, base_runners, bso_line, matchup_line, commentary_line, last_pitch, sb_width):
         """
 
-        :param base_runners:
-        :param commentary_line:
-        :param sb_width:
+
         :return:
         """
 
@@ -412,7 +410,7 @@ class MLBLiveScoreboard:
         return list:  home = 0, first = 1, second = 2, third = 3
         ex. runner on second:  [o][][X][]
         home is always 'o' (for batter)
-        :param game_pk:
+
         :return:
         """
 
@@ -465,7 +463,6 @@ class MLBLiveScoreboard:
 
         get pitcher-batter match up with stats
 
-        :param game_pk:
         :return:
         """
 
@@ -520,13 +517,14 @@ class MLBLiveScoreboard:
 
             # get updated data from MLB
             self.livedata = self.refresh_live_data()
+            # self.process_subs(self.get_current_inning_half())
 
             # get game status
             self.game_status = self.get_game_status()
 
             # set intital batting order
-            if self.game_status.upper() == 'IN PROGRESS':
-                self.set_batting_order()
+            # if self.game_status.upper() == 'IN PROGRESS':
+            #     self.set_batting_order()
 
             # TODO make global list of status conditions and use 'in' to determine what to do
 
@@ -556,7 +554,7 @@ class MLBLiveScoreboard:
 
             # fill innings
             scoreboard_inning_headers, \
-            away_line_score, home_line_score = self.build_innings(scoreboard_inning_headers, away_line_score, \
+            away_line_score, home_line_score = self.build_innings(scoreboard_inning_headers, away_line_score,
                                                                   home_line_score)
             # Append team totals to line scores
             scoreboard_inning_headers += scoreboard_totals_headers
@@ -663,7 +661,6 @@ class MLBLiveScoreboard:
     def build_game_status_info(self, sb_width):
         """
 
-        :param game_pk:
         :param sb_width:
         :return:
         """
@@ -761,16 +758,8 @@ class MLBLiveScoreboard:
         Return a string containing the names and averages of the next three due up
         hitters.  Only shown during inning breaks.
 
-        :param game_pk:
-        :param inning_half:
         :return:
         """
-
-        # TODO - catch subs, because the last batter might have been sub'ed out of the batting order
-
-        # currentPlay -> playEvents -> [index] -> player = this is the new player
-        # currentPlay -> playevents -> [index] -> replacedPlayer = this is the player replaced
-
 
         # three element list to hold next three due up batters
         due_up_batters = []
@@ -781,26 +770,21 @@ class MLBLiveScoreboard:
             # get last batter id from previous inning
             inning_half = self.get_current_inning_half().lower()
             last_batter_inning = self.get_current_inning() - 1
-            last_batter_play_idx = self.livedata['liveData']['plays']['playsByInning'][int(last_batter_inning)][inning_half][-1]
-            last_batter_id = self.livedata['liveData']['plays']['allPlays'][last_batter_play_idx]['matchup']['batter']['id']
-
-            boxscore = self.get_boxscore_data()
-            #linescore = self.get_linescore_data()
-
-            #outs = linescore['outs']
-            outs = self.livedata['liveData']['plays']['currentPlay']['count']['outs']
 
             # screwy logic because sometimes the data doesn't update quickly
             # use inning state?
 
+            outs = self.livedata['liveData']['plays']['currentPlay']['count']['outs']
             if outs == 3:  # we're still in this inning, the data didn't update
                 if inning_half == 'top':
                     # get a list of player ids representing batting order
                     #bat_order = boxscore['teams']['home']['battingOrder']
                     home_or_away = 'home'
+                    inning_half = 'bottom'
                 else:
                     #bat_order = boxscore['teams']['away']['battingOrder']
                     home_or_away = 'away'
+                    inning_half = 'top'
             else:
                 if inning_half == 'top':
                     # get a list of player ids representing batting order
@@ -809,6 +793,11 @@ class MLBLiveScoreboard:
                 else:
                     #bat_order = boxscore['teams']['home']['battingOrder']
                     home_or_away = 'home'
+
+            last_batter_play_idx = self.livedata['liveData']['plays']['playsByInning'][int(last_batter_inning)][inning_half][-1]
+            last_batter_id = self.livedata['liveData']['plays']['allPlays'][last_batter_play_idx]['matchup']['batter']['id']
+
+            boxscore = self.get_boxscore_data()
 
             # get list of batter ids in order
             bat_order = boxscore['teams'][home_or_away]['battingOrder']
@@ -839,7 +828,6 @@ class MLBLiveScoreboard:
     def get_batter_stats(self, batter_id, home_away):
         """
 
-        :param game_pk:
         :param batter_id:
         :return:
         """
@@ -870,9 +858,6 @@ class MLBLiveScoreboard:
     def get_last_play_description(self):
         """
 
-        :param game_pk:
-        :param inning_num:
-        :param inning_state:
         :return:
         """
         last_play = ''
@@ -966,7 +951,6 @@ class MLBLiveScoreboard:
 
         :param away_line:
         :param home_line:
-        :param game_pk:
         :return:
         """
 
@@ -1003,7 +987,7 @@ class MLBLiveScoreboard:
         :param header_line:
         :param away_line:
         :param home_line:
-        :param game_pk:
+
         :return:
         """
         inning_num = 0

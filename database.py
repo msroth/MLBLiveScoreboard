@@ -23,8 +23,8 @@ class Database:
             cursor = conn.cursor()
             cursor.execute(sql)
             results = cursor.fetchall()
-        except sqlite3.Error as ex:
-            print('Query error: {}'.format(ex))
+        except sqlite3.Error as err:
+            print('Query error: {}'.format(err))
         finally:
             if results is None or len(results) == 0:
                 return None
@@ -56,8 +56,8 @@ class Database:
             cursor = conn.cursor()
             rows = cursor.execute(sql, values)
             conn.commit()
-        except sqlite3.Error as ex:
-            print('Insert error: {}'.format(ex))
+        except sqlite3.Error as err:
+            print('Insert error: {}'.format(err))
 
         return rows
 
