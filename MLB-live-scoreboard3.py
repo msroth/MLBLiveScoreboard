@@ -6,9 +6,10 @@ import os
 import re
 import textwrap
 import argparse
-import configparser
+# import configparser
+
 import mlb_api
-import mlb_data
+import scoreboard_data
 
 """
 MLB API docs and tester
@@ -27,13 +28,8 @@ Sample games for testing
 
 09/08/2019- WSH ATL -- gamePk = 567241
 
-DataClass
-https://realpython.com/python-data-classes/
-
-
 http://statsapi.mlb.com/api/v1.1/game/632970/feed/live
 http://statsapi.mlb.com/api/v1/schedule?sportId=1&date=08/11/2021&fields?gamePk=632927
-
 
 """
 
@@ -58,7 +54,7 @@ class MLBLiveScoreboard:
 
     def __init__(self):
         self.api = mlb_api.MLB_API()
-        self.scoreboard_data = mlb_data.ScoreboardData()
+        self.scoreboard_data = scoreboard_data.ScoreboardData()
         self.refresh_rate = int(config.SB_CONFIG['refresh'])
         self.delay_refresh_rate = int(config.SB_CONFIG['delay'])
 
@@ -66,7 +62,7 @@ class MLBLiveScoreboard:
         return self.scoreboard_data.validate_team_name(team)
 
     def get_team_id(self, team):
-        return self.scoreboard_data.get_team_id(team)
+        return self.scoreboard_data.return_team_id(team)
 
     def find_gamepk(self, team1, team2, game_date):
         game_pks = []
@@ -88,7 +84,7 @@ class MLBLiveScoreboard:
                     team2_id = self.get_team_id(team2)
 
             # get schedule of games today
-            schedule = self.api.get_schedule_data(game_date)
+            schedule = self.api.fetch_schedule_data(game_date)
 
             # loop through games looking for team(s)
             for games in schedule['dates'][0]['games']:
@@ -97,6 +93,8 @@ class MLBLiveScoreboard:
                 if team2_id == 0:
                     if games['teams']['away']['team']['id'] == team1_id:
                         team2_id = games['teams']['home']['team']['id']
+                    if games['teams']['home']['team']['id'] == team1_id:
+                        team2_id = games['teams']['away']['team']['id']
 
                         game_pks.append(games['gamePk'])
                         game_details.append('{} @ {} {}'.format(games['teams']['away']['team']['name'],
@@ -130,7 +128,6 @@ class MLBLiveScoreboard:
 
         except Exception as ex:
             sys.exit('ERROR: Could not find game PK. {}'.format(ex))
-
 
     def load_game_data(self, game_pk):
         self.game_pk = game_pk
@@ -167,41 +164,42 @@ class MLBLiveScoreboard:
     #     self.scoreboard_data.set_batting_order()
 
     def get_game_status(self):
-        return self.scoreboard_data.get_game_status()
+        return self.scoreboard_data.return_game_status()
 
     def refresh_live_data(self):
         return self.scoreboard_data.refresh_live_data(self.game_pk)
 
     def get_current_inning_half(self):
-        return self.scoreboard_data.get_current_inning_half()
+        return self.scoreboard_data.return_current_inning_half()
 
     def get_current_inning(self):
-        return self.scoreboard_data.get_current_inning()
+        return self.scoreboard_data.return_current_inning()
 
     def get_current_inning_state(self):
-        return self.scoreboard_data.get_current_inning_state()
+        return self.scoreboard_data.return_current_inning_state()
 
     def get_current_play_index(self):
-        return self.scoreboard_data.get_current_play_index()
+        return self.scoreboard_data.return_current_play_index()
 
     def get_current_play_data(self):
-        return self.scoreboard_data.get_current_play_data()
+        return self.scoreboard_data.return_current_play_data()
 
     def get_last_play_data(self):
-        return self.scoreboard_data.get_last_play_data()
+        return self.scoreboard_data.return_last_play_data()
 
     def get_a_play_data(self, play_idx):
-        return self.scoreboard_data.get_a_play_data(play_idx)
+        return self.scoreboard_data.return_a_play_data(play_idx)
 
     def get_linescore_data(self):
-        return self.scoreboard_data.get_linescore_data()
+        return self.scoreboard_data.return_linescore_data()
 
     def get_boxscore_data(self):
-        return self.scoreboard_data.get_boxscore_data()
+        return self.scoreboard_data.return_boxscore_data()
 
     def get_game_note(self):
         note = ''
-        linescore = self.livedata['liveData']['linescore']
+        # linescore = self.livedata['liveData']['linescore']
+        linescore = self.scoreboard_data.return_linescore_data()
 
         # if there is a note, return it
         if 'note' in linescore:
@@ -210,7 +208,8 @@ class MLBLiveScoreboard:
         return note
 
     def get_team_rhe(self):
-        linescore = self.livedata['liveData']['linescore']
+        # linescore = self.livedata['liveData']['linescore']
+        linescore = self.scoreboard_data.return_linescore_data()
 
         # get R - H - E for away team
         away_team_rhe = [linescore['teams']['away']['runs'],
@@ -243,26 +242,17 @@ class MLBLiveScoreboard:
         :return:
         """
 
-        out_lines = []
-        formated_line = ''
-        # if len(commentary) > sb_width:
-        #     while len(commentary) > sb_width:
-        #         out_lines.append(commentary[:sb_width])
-        #         commentary = commentary[sb_width:]
-        #
-        # # catch short commentary or last line of long commentary
-        # out_lines.append(commentary)
-
-        # TODO --- not tested ---
+        # out_lines = []
+        formatted_line = ''
         out_lines = textwrap.wrap(commentary, sb_width)
 
         for line in out_lines:
-            formated_line += line + '\n'
+            formatted_line += line + '\n'
 
-        formated_line.strip()
-        formated_line += due_up_batters
+        formatted_line.strip()
+        formatted_line += due_up_batters
 
-        return formated_line
+        return formatted_line
 
     def build_bso_line(self):
         """
@@ -270,9 +260,6 @@ class MLBLiveScoreboard:
 
         :return:
         """
-        # linescore = self.get_linescore_data()
-        # return 'B:{} S:{} O:{}'.format(linescore['balls'],
-        #                                linescore['strikes'], linescore['outs'])
 
         play_data = self.get_current_play_data()
         return 'B:{} S:{} O:{}'.format(play_data['count']['balls'], play_data['count']['strikes'],
@@ -285,16 +272,10 @@ class MLBLiveScoreboard:
         :return:
         """
         # stats:  wins, losses, era
-        stats = []
-
-        # only retrieve certain fields
-        # fields = '?fields=teams,home,away,pitchers,players,seasonStats,pitching,era,wins,losses'
-        # pitcher_stats = get_data(API_BOXSCORE_URL.format(game_pk) + fields)
-
-        pitcher_stats = self.get_boxscore_data()
-
         stats = ['0', '0', '-.--']
         found = False
+
+        pitcher_stats = self.get_boxscore_data()
 
         # away
         for pitcher in pitcher_stats['teams']['away']['players']:
@@ -331,18 +312,11 @@ class MLBLiveScoreboard:
 
         :return:
         """
-        # only retrieve certain fields
-        # fields = '?fields=gameData,probablePitchers,away,fullName,id,home'
-        # livedata = get_data(API_LIVEFEED_URL.format(game_pk) + fields)
 
         try:
             away_pitcher_name = self.livedata['gameData']['probablePitchers']['away']['fullName']
-            # away_pitcher_name = '{} {}'.format(str(away_pitcher_name.split(',')[1]).strip(),
-            #                                    str(away_pitcher_name.split(',')[0]).strip())
             away_pitcher_id = self.livedata['gameData']['probablePitchers']['away']['id']
             home_pitcher_name = self.livedata['gameData']['probablePitchers']['home']['fullName']
-            # home_pitcher_name = '{} {}'.format(str(home_pitcher_name.split(',')[1]).strip(),
-            #                                    str(home_pitcher_name.split(',')[0]).strip())
             home_pitcher_id = self.livedata['gameData']['probablePitchers']['home']['id']
 
             # use id to get record and ERA
@@ -353,7 +327,7 @@ class MLBLiveScoreboard:
                                                                       away_pitcher_stats[1], away_pitcher_stats[2],
                                                                       home_pitcher_name, home_pitcher_stats[0],
                                                                       home_pitcher_stats[1], home_pitcher_stats[2])
-        except Exception as ex:
+        except Exception as err:
             return 'TBD vs. TBD'
 
     def build_win_lose_pitcher_line(self):
@@ -376,7 +350,8 @@ class MLBLiveScoreboard:
                                                                      loser, loser_wl[0], loser_wl[1],
                                                                      loser_wl[2])
 
-    def format_status_lines_with_diamond(self, base_runners, bso_line, matchup_line, commentary_line, last_pitch, sb_width):
+    @staticmethod
+    def format_status_lines_with_diamond(base_runners, bso_line, matchup_line, commentary_line, last_pitch, sb_width):
         """
 
 
@@ -417,38 +392,13 @@ class MLBLiveScoreboard:
         bases = ['o', ' ', ' ', ' ']
         bases_lines = ['', '', '']
 
-
-        # TODO fix logic?
-        # still not completely right
-
-        this_inning = self.get_current_inning()
-        this_half = self.get_current_inning_half().lower()
-        plays_this_inning = self.livedata['liveData']['plays']['playsByInning'][this_inning - 1][this_half]
-        for play_index in plays_this_inning:
-            #play_data = self.livedata['liveData']['plays']['allPlays'][play_index]
-            play_data = self.get_a_play_data(play_index)
-            runners = play_data['runners']
-            if runners is not None:
-                for runner in runners:
-                    if runner['movement']['isOut'] is False:
-                        abase = runner['movement']['end']
-                        if abase != 'score':
-                            base_idx = int(abase[:1])
-                            bases[base_idx] = 'X'
-                    # else:
-                    #     abase = runner['movement']['end']
-                    #     base_idx = int(abase[:1])
-                    #     bases[base_idx] = ' '
-
-        # runners = self.get_current_play_data()['runners']
-        # if runners is not None:
-        #     for runner in runners:
-        #         if runner['movement']['isOut'] is None or runner['movement']['isOut'] is False:
-        #             abase = runner['movement']['end']
-        #             if abase != 'score':
-        #                 base_idx = int(abase[:1])
-        #                 bases[base_idx] = 'X'
-
+        linescore = self.scoreboard_data.return_linescore_data()
+        if 'first' in linescore['offense']:
+            bases[1] = 'X'
+        if 'second' in linescore['offense']:
+            bases[2] = 'X'
+        if 'third' in linescore['offense']:
+            bases[3] = 'X'
 
         # reformat base configuration
         bases_lines[0] = '    [' + bases[2] + ']     | '
@@ -465,10 +415,6 @@ class MLBLiveScoreboard:
 
         :return:
         """
-
-        # only retrieve certain fields
-        #fields = '?fields=currentPlay,matchup,batter,pitcher,id,fullName,about,halfInning'
-        #play_by_play = get_data(API_PLAYBYPLAY_URL.format(game_pk))
 
         data = self.get_current_play_data()
         pitcher_name = data['matchup']['pitcher']['fullName']
@@ -571,8 +517,8 @@ class MLBLiveScoreboard:
             # ---- Print the scoreboard ----
 
             # print game info line
-            print('{} @ {}: {} (Game #{})'.format(self.scoreboard_data.get_away_team(),
-                                                  self.scoreboard_data.get_home_team(),
+            print('{} @ {}: {} (Game #{})'.format(self.scoreboard_data.return_away_team(),
+                                                  self.scoreboard_data.return_home_team(),
                                                   self.get_game_date_time(), game_pk))
 
             print(double_bar)
@@ -680,10 +626,6 @@ class MLBLiveScoreboard:
                 game_status.upper() != 'POSTPONED' and \
                 game_status[:9].upper() != 'SUSPENDED':
 
-            # get game status
-            # fields = '?fields=currentInningOrdinal,inningHalf,inningState'
-            # linescore = get_data(API_LINESCORE_URL.format(game_pk) + fields)
-
             linescore = self.livedata['liveData']['linescore']
             # get play commentary
             commentary_line = self.get_last_play_description()
@@ -692,7 +634,6 @@ class MLBLiveScoreboard:
             inning_state = self.get_current_inning_state()
             if inning_state.upper() == 'END' or inning_state.upper() == 'MIDDLE':
                 due_up_batters = self.build_dueup_batters_line()
-
                 status_line = self.format_due_up_status(commentary_line, due_up_batters, sb_width)
 
             else:
@@ -777,33 +718,34 @@ class MLBLiveScoreboard:
             outs = self.livedata['liveData']['plays']['currentPlay']['count']['outs']
             if outs == 3:  # we're still in this inning, the data didn't update
                 if inning_half == 'top':
-                    # get a list of player ids representing batting order
-                    #bat_order = boxscore['teams']['home']['battingOrder']
                     home_or_away = 'home'
                     inning_half = 'bottom'
                 else:
-                    #bat_order = boxscore['teams']['away']['battingOrder']
                     home_or_away = 'away'
                     inning_half = 'top'
             else:
                 if inning_half == 'top':
-                    # get a list of player ids representing batting order
-                    #bat_order = boxscore['teams']['away']['battingOrder']
                     home_or_away = 'away'
                 else:
-                    #bat_order = boxscore['teams']['home']['battingOrder']
                     home_or_away = 'home'
 
-            last_batter_play_idx = self.livedata['liveData']['plays']['playsByInning'][int(last_batter_inning)][inning_half][-1]
-            last_batter_id = self.livedata['liveData']['plays']['allPlays'][last_batter_play_idx]['matchup']['batter']['id']
+            if inning_half.lower() == 'top':
+                last_batter_id = self.scoreboard_data.return_last_batter_ids()[1]
+            else:
+                last_batter_id = self.scoreboard_data.return_last_batter_ids()[0]
 
             boxscore = self.get_boxscore_data()
 
-            # get list of batter ids in order
+            # get list of batter ids in batting order
             bat_order = boxscore['teams'][home_or_away]['battingOrder']
 
             # find batter id in bat_order list
             batting_order_idx = bat_order.index(last_batter_id) + 1
+
+            # TODO
+            # if last batter was sub'ed out, figure out sub id
+            # logic above in code, commented out around line 140
+            
 
             for j in range(3):  # get next three batters
                 batting_order_idx += j
@@ -868,7 +810,7 @@ class MLBLiveScoreboard:
 
             # first try to get current play.  If no description, get last play
             play_data = self.get_current_play_data()
-            if 'description' in play_data:
+            if 'description' in play_data['result']:
                 description = play_data['result']['description']
             if len(description) == 0:
                 play_data = self.get_last_play_data()
@@ -899,22 +841,22 @@ class MLBLiveScoreboard:
         return last_play
 
     def get_last_pitch(self):
-        # only retrieve certain fields
-        # fields = '?fields=currentPlay,playEvents,details,type,description,pitchData,endSpeed,pitchNumber'
-        # play_by_play = get_data(API_PLAYBYPLAY_URL.format(game_pk) + fields)
+        pitch_number = ''
+        pitch_type = ''
+        pitch_speed = ''
+
         play_data = self.get_current_play_data()
 
-        # TODO - not sure this returns the last pitch.  It doesn't line up with TV
         # note:  endspeed is different than startspeed.  I suspect the TV reports
         #        startspeed.
         try:
             events = play_data['playEvents']
-            last_event = len(events) - 1
-            # for event in events:
-            pitch_type = events[last_event]['details']['type']['description']
-            pitch_speed = events[last_event]['pitchData']['startSpeed']
+            last_event = len(events) - 1  # zero-based
             pitch_result = events[last_event]['details']['description']
-            pitch_number = events[last_event]['pitchNumber']
+            if 'type' in events[last_event]['details']:
+                pitch_type = events[last_event]['details']['type']['description']
+                pitch_speed = events[last_event]['pitchData']['startSpeed']
+                pitch_number = events[last_event]['pitchNumber']
 
         except Exception as ex:
             return ''
@@ -923,7 +865,7 @@ class MLBLiveScoreboard:
 
     def get_team_abbrevs_list(self):
         team_str = ''
-        teams = self.scoreboard_data.get_team_abbrevs()
+        teams = self.scoreboard_data.return_team_abbrevs()
         for i in range(len(teams)):
             team_str += teams[i][0] + ','
         return team_str[:-1]

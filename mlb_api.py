@@ -14,42 +14,23 @@ class MLB_API:
     API_SCHEDULE_GAMEPK_URL = API_BASE_URL + "/v1/schedule?sportId=1&gamePk={}"
     API_PERSON_CURRENT_STATS_URL = API_BASE_URL + "/v1/people/{}/stats/game/current"
 
-    #def __init__(self):
-
-
-    def get_data(self, url):
+    @staticmethod
+    def fetch_data(url):
         try:
             results = requests.get(url).json()
         except Exception as err:
             sys.exit('An unhandled exception occurred retrieving data from MLB.\n{}'.format(err))
         return results
 
-    def get_team_data(self):
-        # only retrieve certain fields
-        fields = '&fields=teams,0,id,name,abbreviation,teamName'
-        team_data = self.get_data(self.API_TEAMS_URL + fields)['teams']
+    def fetch_teams_data(self):
+        team_data = self.fetch_data(self.API_TEAMS_URL)['teams']
         return team_data
 
-    def get_schedule_data(self, game_date):
-        # only retrieve certain fields
-        #fields = '&fields=dates,games,gamePk,teams,team,name,id,doubleHeader'
-        fields = ''
-        schedule_data = self.get_data(self.API_SCHEDULE_URL.format(game_date) + fields)
+    def fetch_schedule_data(self, game_date):
+        schedule_data = self.fetch_data(self.API_SCHEDULE_URL.format(game_date))
         return schedule_data
 
-    # def get_player_data(self, game_pk):
-    #     # only retrieve certain fields
-    #     fields = '?fields=teams,away,home,players,fullName,id,jerseyNumber'
-    #     player_data = self.get_data(self.API_BOXSCORE_URL.format(game_pk) + fields)
-    #     return player_data
-
-    def get_home_away_team_id(self, game_pk):
-        # only retrieve certain fields
-        fields = '?fields=teams,home,away,team,id'
-        team_id = self.get_data(self.API_BOXSCORE_URL.format(game_pk) + fields)
-        return team_id
-
-    def get_live_feed(self, game_pk):
-        live_data = self.get_data(self.API_LIVEFEED_URL.format(game_pk))
+    def fetch_live_feed_data(self, game_pk):
+        live_data = self.fetch_data(self.API_LIVEFEED_URL.format(game_pk))
         return live_data
 
