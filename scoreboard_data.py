@@ -7,8 +7,8 @@ import datetime
 class ScoreboardData:
     scoreboard_db = None
     api = None
-    db_file = 'MLB-live-scoreboard.db'
-    # db_file = ':memory:'
+    #db_file = 'MLB-live-scoreboard.db'
+    db_file = ':memory:'
     live_data = None
 
     table_status = 'status'
@@ -313,3 +313,4 @@ class ScoreboardData:
                                 'away_team_name': self.return_a_team_name(away_team_id)[0],
                                 'game_pk': game_pk})
 
+# <SGD><

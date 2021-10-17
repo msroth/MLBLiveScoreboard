@@ -36,10 +36,10 @@ http://statsapi.mlb.com/api/v1/schedule?sportId=1&date=08/11/2021&fields?gamePk=
 VERSION = '0.8'
 COPYRIGHT = '(C) 2018-2021 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
-GAME_STATUS_ENDED = ['GAME OVER', 'FINAL', 'POSTPONED']
-GAME_STATUS_RUNNING = ['IN PROGRESS']
+GAME_STATUS_ENDED = ['GAME OVER', 'FINAL', 'POSTPONED', 'SUSPENDED']
+GAME_STATUS_RUNNING = ['IN PROGRESS', 'DELAYED']
 GAME_STATUS_NOT_STARTED = ['SCHEDULED', 'WARMUP', 'PRE-GAME']
-GAME_STATUS_DELAYED = ['DELAYED']
+# GAME_STATUS_DELAYED = ['DELAYED']
 
 
 class MLBLiveScoreboard:
@@ -182,7 +182,7 @@ class MLBLiveScoreboard:
     def get_game_note(self):
         note = ''
         # linescore = self.livedata['liveData']['linescore']
-        linescore = self.scoreboard_data.return_linescore_data()
+        linescore = self.get_linescore_data()
 
         # if there is a note, return it
         if 'note' in linescore:
@@ -191,7 +191,6 @@ class MLBLiveScoreboard:
         return note
 
     def get_team_rhe(self):
-        # linescore = self.livedata['liveData']['linescore']
         linescore = self.scoreboard_data.return_linescore_data()
 
         # get R - H - E for away team
@@ -213,7 +212,7 @@ class MLBLiveScoreboard:
         if os.name.upper() == 'NT':
             os.system('cls')
         else:
-            print('\n\n\n\n\n')
+            print('\n\n\n\n')
 
     @staticmethod
     def format_due_up_status(commentary, due_up_batters, sb_width):
@@ -263,12 +262,9 @@ class MLBLiveScoreboard:
         # away
         for pitcher in pitcher_stats['teams']['away']['players']:
             if 'ID' + str(pitcher_id) == pitcher:
-                stats[2] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
-                    'era']
-                stats[0] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
-                    'wins']
-                stats[1] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
-                    'losses']
+                stats[2] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['era']
+                stats[0] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['wins']
+                stats[1] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['losses']
                 found = True
                 break
 
@@ -277,14 +273,11 @@ class MLBLiveScoreboard:
             for pitcher in pitcher_stats['teams']['home']['players']:
                 if 'ID' + str(pitcher_id) == pitcher:
                     stats[2] = \
-                    pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
-                        'era']
+                    pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['era']
                     stats[0] = \
-                    pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
-                        'wins']
+                    pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['wins']
                     stats[1] = \
-                    pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
-                        'losses']
+                    pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['losses']
                     found = True
                     break
 
@@ -392,7 +385,7 @@ class MLBLiveScoreboard:
         return bases_lines
 
 
-    def build_pitcher_batter_line(self):
+    def build_pitcher_batter_matchup_line(self):
         """
 
         get pitcher-batter match up with stats
@@ -412,11 +405,12 @@ class MLBLiveScoreboard:
         batter_stats = []
 
         # get stats
-        inning_half = data['about']['halfInning']
-        if inning_half.upper() == 'TOP':
-            batter_stats = self.get_batter_stats(batter_id, 'away')
-        else:
-            batter_stats = self.get_batter_stats(batter_id, 'home')
+        # inning_half = data['about']['halfInning']
+        # if inning_half.upper() == 'TOP':
+        #     batter_stats = self.get_batter_stats(batter_id, 'away')
+        # else:
+        #     batter_stats = self.get_batter_stats(batter_id, 'home')
+        batter_stats = self.get_batter_stats(batter_id)
         pitcher_stats = self.get_pitcher_stats(pitcher_id)
 
         # return pitcher-batter matchup line
@@ -447,16 +441,9 @@ class MLBLiveScoreboard:
 
             # get updated data from MLB
             self.livedata = self.refresh_live_data()
-            # self.process_subs(self.get_current_inning_half())
 
             # get game status
             self.game_status = self.get_game_status()
-
-            # set intital batting order
-            # if self.game_status.upper() == 'IN PROGRESS':
-            #     self.set_batting_order()
-
-            # TODO make global list of status conditions and use 'in' to determine what to do
 
             # Load team totals
             if self.game_status.upper() not in GAME_STATUS_NOT_STARTED:
@@ -480,7 +467,7 @@ class MLBLiveScoreboard:
                 inning_half += ' ' * (team_name_length - len(inning_half))
 
             # inning headers
-            scoreboard_inning_headers.append(inning_half)
+            scoreboard_inning_headers.append(inning_half.upper())
 
             # fill innings
             scoreboard_inning_headers, \
@@ -536,30 +523,42 @@ class MLBLiveScoreboard:
             # then set loop condition based on game_status
 
             # Game over
-            if self.game_status.upper() == 'GAME OVER':
-                end_loop = True
+            # if self.game_status.upper() == 'GAME OVER':
+            #     end_loop = True
+            #
+            # if self.game_status.upper() == 'FINAL':
+            #     end_loop = True
+            #
+            # if self.game_status.upper() == 'POSTPONED':
+            #     end_loop = True
+            #
+            # if self.game_status[:9].upper() == 'SUSPENDED':
+            #     end_loop = True
 
-            if self.game_status.upper() == 'FINAL':
-                end_loop = True
-
-            if self.game_status.upper() == 'POSTPONED':
-                end_loop = True
-
-            if self.game_status[:9].upper() == 'SUSPENDED':
+            if self.game_status.upper() in GAME_STATUS_ENDED or self.game_status.upper()[:9] in GAME_STATUS_ENDED:
                 end_loop = True
 
             # Game not started
-            if self.game_status.upper() == 'WARMUP':
+            # if self.game_status.upper() == 'SCHEDULED':
+            #     end_loop = True
+
+            # if self.game_status.upper() == 'PRE-GAME':
+            #     end_loop = True
+
+            if self.game_status.upper() in GAME_STATUS_NOT_STARTED:
+                end_loop = True
+
+            # if self.game_status.upper() == 'WARMUP':
+            #     end_loop = False
+
+            if self.game_status.upper() in GAME_STATUS_RUNNING:
                 end_loop = False
 
-            if self.game_status.upper() == 'SCHEDULED':
-                end_loop = True
-
-            if self.game_status.upper() == 'PRE-GAME':
-                end_loop = True
-
             # any other not 'in progress' state
-            if self.game_status.upper() != 'IN PROGRESS':
+            # if self.game_status.upper() != 'IN PROGRESS':
+            #     print(game_status_info)
+
+            if self.game_status not in GAME_STATUS_RUNNING:
                 print(game_status_info)
 
             # Print game note if there is one
@@ -570,23 +569,28 @@ class MLBLiveScoreboard:
                 else:
                     print('Note: ' + self.game_note)
 
-            if self.game_status.upper() == 'IN PROGRESS':
-                print(game_status_info)
+            # if self.game_status.upper() == 'IN PROGRESS':
+            #     print(game_status_info)
 
             print(double_bar)
 
-            # Print banner
+            # Print (c) banner
             print(COPYRIGHT)
             sys.stdout.flush()
 
             # Sleep for a while and continue with loop
             if not end_loop:
-                if self.game_status[:7].upper() == 'DELAYED' or \
-                        self.game_status.upper() == 'WARMUP' or \
-                        self.game_status.upper() == ' PRE-GAME':
-                    time.sleep(self.delay_refresh_rate)
-                else:
+                if self.game_status.upper() in GAME_STATUS_RUNNING:
                     time.sleep(self.refresh_rate)
+                else:
+                    time.sleep(self.delay_refresh_rate)
+                #
+                # if self.game_status[:7].upper() == 'DELAYED' or \
+                #         self.game_status.upper() == 'WARMUP' or \
+                #         self.game_status.upper() == ' PRE-GAME':
+                #     time.sleep(self.delay_refresh_rate)
+                # else:
+                #     time.sleep(self.refresh_rate)
 
     def build_game_status_info(self, sb_width):
         """
@@ -602,13 +606,15 @@ class MLBLiveScoreboard:
         # get game status
         game_status = self.get_game_status()
 
-        if game_status.upper() != 'FINAL' and \
-                game_status.upper() != 'GAME OVER' and \
-                game_status.upper() != 'SCHEDULED' and \
-                game_status.upper() != 'WARMUP' and \
-                game_status.upper() != 'PRE-GAME' and \
-                game_status.upper() != 'POSTPONED' and \
-                game_status[:9].upper() != 'SUSPENDED':
+        # if game_status.upper() != 'FINAL' and \
+        #         game_status.upper() != 'GAME OVER' and \
+        #         game_status.upper() != 'SCHEDULED' and \
+        #         game_status.upper() != 'WARMUP' and \
+        #         game_status.upper() != 'PRE-GAME' and \
+        #         game_status.upper() != 'POSTPONED' and \
+        #         game_status[:9].upper() != 'SUSPENDED':
+
+        if game_status.upper() in GAME_STATUS_RUNNING:
 
             linescore = self.livedata['liveData']['linescore']
             # get play commentary
@@ -627,11 +633,9 @@ class MLBLiveScoreboard:
 
                 # get Balls-Strikes-Outs
                 bso_line = self.build_bso_line()
-                # status_line += bso_line
 
                 # get pitcher - batter match up
-                match_up_line = self.build_pitcher_batter_line()
-                # status_line += match_up_line
+                match_up_line = self.build_pitcher_batter_matchup_line()
 
                 # get the base runners as a formatted list
                 base_runners = self.build_diamond_with_base_runners()
@@ -656,11 +660,13 @@ class MLBLiveScoreboard:
                     status_line += game_status
 
         # game over
-        elif game_status.upper() == 'FINAL' or game_status.upper() == 'GAME OVER':
+        # elif game_status.upper() == 'FINAL' or game_status.upper() == 'GAME OVER':
+        elif game_status.upper() in GAME_STATUS_ENDED:
             status_line = '{}\n{}'.format(self.build_win_lose_pitcher_line(), game_status)
 
         # scheduled or warmup or some other delay
-        elif game_status.upper() == 'SCHEDULED' or game_status.upper() == 'WARMUP' or game_status.upper() == 'PRE-GAME':
+        #elif game_status.upper() == 'SCHEDULED' or game_status.upper() == 'WARMUP' or game_status.upper() == 'PRE-GAME':
+        elif game_status.upper() in GAME_STATUS_NOT_STARTED:
             status_line = '{}\n{}'.format(self.build_sched_pitchers_line(), game_status)
 
         elif game_status.upper() == 'POSTPONED':
@@ -678,16 +684,12 @@ class MLBLiveScoreboard:
 
         return status_line
 
-    def process_substitutions(self, player_id, batting_order, home_away):
-
-        # play # -> PlayEvents -> # -> isSubstitution
-        # get player and player replaced id
+    def process_subs(self, player_id, batting_order, home_away):
 
         # update batting order with subs
-        boxscore = self.get_boxscore_data()
-        for play_idx in self.livedata['plays']['allPlays']:
+        for play_idx in range(len(self.livedata['liveData']['plays']['allPlays'])):
             play_data = self.get_a_play_data(play_idx)
-            for event_idx in play_data['playEvents']:
+            for event_idx in range(len(play_data['playEvents'])):
                 event_data = play_data['playEvents'][event_idx]
                 if 'player' in event_data and 'playerReplaced' in event_data:
                     if player_id == event_data['player']['id']:
@@ -710,57 +712,69 @@ class MLBLiveScoreboard:
 
         try:
 
-            # get last batter id from previous inning
-            inning_half = self.get_current_inning_half().lower()
-            last_batter_inning = self.get_current_inning() - 1
-
-            # screwy logic because sometimes the data doesn't update quickly
-
-            outs = self.livedata['liveData']['plays']['currentPlay']['count']['outs']
-            if outs == 3:  # we're still in this inning, the data didn't update
-                if inning_half == 'top':
-                    home_or_away = 'home'
-                    inning_half = 'bottom'
-                else:
-                    home_or_away = 'away'
-                    inning_half = 'top'
-            else:
-                if inning_half == 'top':
-                    home_or_away = 'away'
-                else:
-                    home_or_away = 'home'
-
-            if inning_half.lower() == 'top':
-                last_batter_id = self.scoreboard_data.return_last_batter_ids()[1]
-            else:
-                last_batter_id = self.scoreboard_data.return_last_batter_ids()[0]
-
             boxscore = self.get_boxscore_data()
 
-            # get list of batter ids in batting order
-            batting_order = boxscore['teams'][home_or_away]['battingOrder']
+            if self.get_current_inning() > 1:
 
-            # update batting order if last batter was pinch hitter, etc.
-            if last_batter_id not in batting_order:
-                batting_order = self.process_substitutions(last_batter_id, batting_order, home_or_away)
+                # get last batter id from previous inning
+                inning_half = self.get_current_inning_half().lower()
+                last_batter_inning = self.get_current_inning() - 1
 
-            # find batter id in bat_order list
-            batting_order_idx = batting_order.index(last_batter_id)
+                # screwy logic because sometimes the data doesn't update quickly
 
-            # start with next batter
-            # batting_order_idx += 1
-            for j in range(3):  # get next three batters, rotate to top of order if at end
-                batting_order_idx += j
-                if batting_order_idx >= 8:
-                    batting_order_idx -= 8
-                batter_id = batting_order[batting_order_idx]
+                outs = self.livedata['liveData']['plays']['currentPlay']['count']['outs']
+                if outs == 3:  # we're still in this inning, the data didn't update
+                    if inning_half == 'top':
+                        home_or_away = 'home'
+                        inning_half = 'bottom'
+                    else:
+                        home_or_away = 'away'
+                        inning_half = 'top'
+                else:
+                    if inning_half == 'top':
+                        home_or_away = 'away'
+                    else:
+                        home_or_away = 'home'
 
-                # get the batters stats
-                batter_stats = self.get_batter_stats(batter_id, home_or_away)
+                if inning_half.lower() == 'top':
+                    last_batter_id = self.scoreboard_data.return_last_batter_ids()[1]
+                else:
+                    last_batter_id = self.scoreboard_data.return_last_batter_ids()[0]
 
-                # format each batters line
-                due_up_batters.append('{} ({}-{}), {} AVG'.format(batter_stats[0], batter_stats[1], batter_stats[2],
-                                                                batter_stats[3]))
+                # get list of batter ids in batting order
+                batting_order = boxscore['teams'][home_or_away]['battingOrder']
+
+                # update batting order if last batter was pinch hitter, etc.
+                if last_batter_id not in batting_order:
+                    batting_order = self.process_subs(last_batter_id, batting_order, home_or_away)
+
+                # find batter id in bat_order list
+                batting_order_idx = batting_order.index(last_batter_id)
+
+                # start with next batter
+                #batting_order_idx += 1
+                for j in range(3):  # get next three batters, rotate to top of order if at end
+                    batting_order_idx += 1
+                    if batting_order_idx > 8:
+                        batting_order_idx = 0
+                    batter_id = batting_order[batting_order_idx]
+
+                    # get the batters stats
+                    batter_stats = self.get_batter_stats(batter_id)
+
+                    # format each batters line
+                    due_up_batters.append('{} ({}-{}), {} AVG'.format(batter_stats[0], batter_stats[1], batter_stats[2],
+                                                                      batter_stats[3]))
+            else:
+                batting_order = boxscore['teams']['home']['battingOrder']
+
+                for j in range(3):
+                    # get the batters stats
+                    batter_stats = self.get_batter_stats(batting_order[j])
+
+                    # format each batters line
+                    due_up_batters.append('{} ({}-{}), {} AVG'.format(batter_stats[0], batter_stats[1], batter_stats[2],
+                                                                      batter_stats[3]))
 
             # build output line
             return '\nDue up:  {}\n         {}\n         {}\n'.format(due_up_batters[0], due_up_batters[1],
@@ -769,7 +783,7 @@ class MLBLiveScoreboard:
             return 'Due up:  TBD'
 
 
-    def get_batter_stats(self, batter_id, home_away):
+    def get_batter_stats(self, batter_id):
         """
 
         :param batter_id:
@@ -777,21 +791,40 @@ class MLBLiveScoreboard:
         """
         # stats: name, hits, atBats, avg
         stats = ['', '', '', '']
+        found = False
 
-        # only retrieve certain fields
-        # fields = '?fields=teams,home,away,players,stats,batting,hits,atBats,seasonStats,avg'
-        # batter_stats = get_data(API_BOXSCORE_URL.format(game_pk) + fields)
-        boxscore = self.livedata['liveData']['boxscore']
+        boxscore = self.get_boxscore_data()
+        #boxscore = self.livedata['liveData']['boxscore']
 
         try:
+            # # away
+            # for player in boxscore['teams'][home_away]['players']:
+            #     if player == 'ID' + str(batter_id):
+            #         stats[0] = boxscore['teams'][home_away]['players']['ID' + str(batter_id)]['person']['fullName']
+            #         stats[2] = boxscore['teams'][home_away]['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
+            #         stats[1] = boxscore['teams'][home_away]['players']['ID' + str(batter_id)]['stats']['batting']['hits']
+            #         stats[3] = boxscore['teams'][home_away]['players']['ID' + str(batter_id)]['seasonStats']['batting']['avg']
+            #         break
+
             # away
-            for player in boxscore['teams'][home_away]['players']:
+            for player in boxscore['teams']['away']['players']:
                 if player == 'ID' + str(batter_id):
-                    stats[0] = boxscore['teams'][home_away]['players']['ID' + str(batter_id)]['person']['fullName']
-                    stats[2] = boxscore['teams'][home_away]['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
-                    stats[1] = boxscore['teams'][home_away]['players']['ID' + str(batter_id)]['stats']['batting']['hits']
-                    stats[3] = boxscore['teams'][home_away]['players']['ID' + str(batter_id)]['seasonStats']['batting']['avg']
+                    stats[0] = boxscore['teams']['away']['players']['ID' + str(batter_id)]['person']['fullName']
+                    stats[2] = boxscore['teams']['away']['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
+                    stats[1] = boxscore['teams']['away']['players']['ID' + str(batter_id)]['stats']['batting']['hits']
+                    stats[3] = boxscore['teams']['away']['players']['ID' + str(batter_id)]['seasonStats']['batting']['avg']
+                    found = True
                     break
+
+                # home
+                if not found:
+                    for player in boxscore['teams']['home']['players']:
+                        if player == 'ID' + str(batter_id):
+                            stats[0] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['person']['fullName']
+                            stats[2] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
+                            stats[1] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting']['hits']
+                            stats[3] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['seasonStats']['batting']['avg']
+                            break
 
         except Exception as ex:
             stats = ['', '', '', '']
@@ -863,8 +896,6 @@ class MLBLiveScoreboard:
 
             if pitch_speed != '':
                 pitch_str = 'Last pitch: #{} {} ({} MPH) - {}'.format(pitch_number, pitch_type, pitch_speed, pitch_result)
-            # else:
-            #     pitch_str = 'Last pitch: {}'.format(pitch_result)
 
         except Exception as ex:
             return ''
@@ -951,14 +982,9 @@ class MLBLiveScoreboard:
                 game_status.upper() == 'FINAL' or game_status.upper() == 'GAME OVER' or \
                 game_status[:9].upper() == 'SUSPENDED':
 
-            # only retrieve certain fields
-            #fields = '?fields=currentInning,inningHalf,inningState,isTopInning,innings,num,home,away,runs'
-            #linescore = get_data(API_LINESCORE_URL.format(game_pk) + fields)
-
             # get inning status, etc.
             inning_half = self.get_current_inning_half()
             current_inning = self.get_current_inning()
-            #inning_state = linescore['inningState']
 
             # process each inning
             linescore = self.livedata['liveData']['linescore']
@@ -1003,11 +1029,6 @@ class MLBLiveScoreboard:
                                     home_line[inning_num] = '{:<3}'.format(inning['home']['runs'])
                             else:
                                 home_line[inning_num] = '{:<3}'.format('-')
-
-                    # # Handle unplayed bottom of ninth
-                    # elif game_status.upper() == 'FINAL' or game_status.upper() == 'GAME OVER':
-                    #     if home_line[inning_num] == '':
-                    #         home_line[inning_num] = '{:<3}'.format('X')
 
                 # Handle unplayed bottom of ninth
                 if game_status.upper() == 'FINAL' or game_status.upper() == 'GAME OVER':
