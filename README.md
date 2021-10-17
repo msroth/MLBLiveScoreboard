@@ -21,7 +21,7 @@ PURPOSE: To produce a simple, live scoreboard to track MLB game play
          [ ]   [X]  | eft fielder Anthony Santander.
             [o]     |
          ===========================================================================
-         (C) 2018-2019 MSRoth, MLB Live Scoreboard v0.6
+         (C) 2018-2021 MSRoth, MLB Live Scoreboard v0.8
 
 AUTHOR:  MSRoth
 
