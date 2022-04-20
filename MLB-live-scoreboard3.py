@@ -31,10 +31,14 @@ Sample games for testing
 http://statsapi.mlb.com/api/v1.1/game/632970/feed/live
 http://statsapi.mlb.com/api/v1/schedule?sportId=1&date=08/11/2021&fields?gamePk=632927
 
+
+See MLB Stats API
+https://github.com/toddrob99/MLB-StatsAPI/wiki
+
 """
 
 VERSION = '0.8'
-COPYRIGHT = '(C) 2018-2021 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
+COPYRIGHT = '(C) 2018-2022 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 GAME_STATUS_ENDED = ['GAME OVER', 'FINAL', 'POSTPONED', 'SUSPENDED']
 GAME_STATUS_RUNNING = ['IN PROGRESS', 'DELAYED']
@@ -98,7 +102,6 @@ class MLBLiveScoreboard:
                         game_details.append('{} @ {} {}'.format(games['teams']['away']['team']['name'],
                                                                 games['teams']['home']['team']['name'],
                                                                 games['gameDate']))
-                        break
 
                     if games['teams']['home']['team']['id'] == team1_id:
                         team2_id = games['teams']['away']['team']['id']
@@ -107,7 +110,6 @@ class MLBLiveScoreboard:
                         game_details.append('{} @ {} {}'.format(games['teams']['away']['team']['name'],
                                                                 games['teams']['home']['team']['name'],
                                                                 games['gameDate']))
-                        break
 
                 # both teams specified
                 else:
@@ -119,7 +121,6 @@ class MLBLiveScoreboard:
                         game_details.append('{} @ {} {}'.format(games['teams']['away']['team']['name'],
                                                                 games['teams']['home']['team']['name'],
                                                                 games['gameDate']))
-                        break
 
             if len(game_pks) == 0:
                 return 0
@@ -421,180 +422,182 @@ class MLBLiveScoreboard:
 
     def run(self):
 
-        # loop until the game is over
-        end_loop = False
-        while not end_loop:
+        try:
+            # loop until the game is over
+            end_loop = False
+            while not end_loop:
 
-            self.clear_screen()
+                self.clear_screen()
 
-            # Init vars for redraw
-            scoreboard_title = ''
-            scoreboard_inning_headers = []
-            away_line_score = []
-            home_line_score = []
-            scoreboard_totals_headers = ['R', 'H', 'E']
-            away_totals = ['0', '0', '0']
-            home_totals = ['0', '0', '0']
+                # Init vars for redraw
+                scoreboard_title = ''
+                scoreboard_inning_headers = []
+                away_line_score = []
+                home_line_score = []
+                scoreboard_totals_headers = ['R', 'H', 'E']
+                away_totals = ['0', '0', '0']
+                home_totals = ['0', '0', '0']
 
-            # print update header
-            print('Retrieving game data from MLB ({})...\n'.format(datetime.datetime.now().strftime('%m/%d/%Y %X')))
+                # print update header
+                print('Retrieving game data from MLB ({})...\n'.format(datetime.datetime.now().strftime('%m/%d/%Y %X')))
 
-            # get updated data from MLB
-            self.livedata = self.refresh_live_data()
+                # get updated data from MLB
+                self.livedata = self.refresh_live_data()
 
-            # get game status
-            self.game_status = self.get_game_status()
+                # get game status
+                self.game_status = self.get_game_status()
 
-            # Load team totals
-            if self.game_status.upper() not in GAME_STATUS_NOT_STARTED:
-                away_totals, home_totals = self.get_team_rhe()
+                # Load team totals
+                if self.game_status.upper() not in GAME_STATUS_NOT_STARTED:
+                    away_totals, home_totals = self.get_team_rhe()
 
-            # Get game note
-            self.game_note = self.get_game_note()
+                # Get game note
+                self.game_note = self.get_game_note()
 
-            # Add team names and records to line scores
-            away_line_score, home_line_score = self.build_team_names_with_record(away_line_score, home_line_score)
+                # Add team names and records to line scores
+                away_line_score, home_line_score = self.build_team_names_with_record(away_line_score, home_line_score)
 
-            # Enter inning half or game status in first element of inning header
-            team_name_length = max(len(away_line_score[0]), len(home_line_score[0]))
+                # Enter inning half or game status in first element of inning header
+                team_name_length = max(len(away_line_score[0]), len(home_line_score[0]))
 
-            if self.game_status.upper() != 'IN PROGRESS' and self.game_status[:7].upper() != 'DELAYED' and self.game_status[:9].upper() != 'SUSPENDED':
-                inning_half = ' '
-            else:
-                inning_half = '{} {}'.format(self.get_current_inning_half(), self.get_current_inning())
-
-            if team_name_length > len(inning_half):
-                inning_half += ' ' * (team_name_length - len(inning_half))
-
-            # inning headers
-            scoreboard_inning_headers.append(inning_half.upper())
-
-            # fill innings
-            scoreboard_inning_headers, \
-            away_line_score, home_line_score = self.build_innings(scoreboard_inning_headers, away_line_score,
-                                                                  home_line_score)
-            # Append team totals to line scores
-            scoreboard_inning_headers += scoreboard_totals_headers
-            away_line_score += away_totals
-            home_line_score += home_totals
-
-            # Build bars according to lengths
-            double_bar = '=' * ((len(scoreboard_inning_headers * 5) + len(scoreboard_inning_headers[0])) - 3)
-            single_bar = '-' * len(double_bar)
-
-            # build status output
-            game_status_info = self.build_game_status_info(len(double_bar)).strip('\n')
-
-            # ---- Print the scoreboard ----
-
-            # print game info line
-            print('{} @ {}: {} (Game #{})'.format(self.scoreboard_data.return_away_team(),
-                                                  self.scoreboard_data.return_home_team(),
-                                                  self.get_game_date_time(), game_pk))
-
-            print(double_bar)
-
-            # Print inning headers
-            output = ''
-            for x in scoreboard_inning_headers:
-                output += ' {:<3}|'.format(x)
-            print(output)
-            print(single_bar)
-
-            # Print away line score
-            output = ''
-            for i, x in enumerate(away_line_score):
-                if scoreboard_inning_headers[i] == 'R':
-                    output = output[:-1] + '|'
-                output += ' {:<3} '.format(x)
-            print(output)
-
-            # Print home line score
-            output = ''
-            for i, y in enumerate(home_line_score):
-                if scoreboard_inning_headers[i] == 'R':
-                    output = output[:-1] + '|'
-                output += ' {:<3} '.format(y)
-            print(output)
-
-            print(single_bar)
-
-            # TODO one call to build_game_status_info and print it
-            # then set loop condition based on game_status
-
-            # Game over
-            # if self.game_status.upper() == 'GAME OVER':
-            #     end_loop = True
-            #
-            # if self.game_status.upper() == 'FINAL':
-            #     end_loop = True
-            #
-            # if self.game_status.upper() == 'POSTPONED':
-            #     end_loop = True
-            #
-            # if self.game_status[:9].upper() == 'SUSPENDED':
-            #     end_loop = True
-
-            if self.game_status.upper() in GAME_STATUS_ENDED or self.game_status.upper()[:9] in GAME_STATUS_ENDED:
-                end_loop = True
-
-            # Game not started
-            # if self.game_status.upper() == 'SCHEDULED':
-            #     end_loop = True
-
-            # if self.game_status.upper() == 'PRE-GAME':
-            #     end_loop = True
-
-            if self.game_status.upper() in GAME_STATUS_NOT_STARTED:
-                end_loop = True
-
-            # if self.game_status.upper() == 'WARMUP':
-            #     end_loop = False
-
-            if self.game_status.upper() in GAME_STATUS_RUNNING:
-                end_loop = False
-
-            # any other not 'in progress' state
-            # if self.game_status.upper() != 'IN PROGRESS':
-            #     print(game_status_info)
-
-            if self.game_status not in GAME_STATUS_RUNNING:
-                print(game_status_info)
-
-            # Print game note if there is one
-            if self.game_note:
-                if len(self.game_note) > len(double_bar):
-                    print('Note: ' + self.game_note[:len(double_bar) - 5])
-                    print('      ' + self.game_note[len(double_bar) - 5 + 1:])
+                if self.game_status.upper() != 'IN PROGRESS' and self.game_status[:7].upper() != 'DELAYED' and self.game_status[:9].upper() != 'SUSPENDED':
+                    inning_half = ' '
                 else:
-                    print('Note: ' + self.game_note)
+                    inning_half = '{} {}'.format(self.get_current_inning_half(), self.get_current_inning())
 
-            # if self.game_status.upper() == 'IN PROGRESS':
-            #     print(game_status_info)
+                if team_name_length > len(inning_half):
+                    inning_half += ' ' * (team_name_length - len(inning_half))
 
-            print(double_bar)
+                # inning headers
+                scoreboard_inning_headers.append(inning_half.upper())
 
-            # Print (c) banner
-            print(COPYRIGHT)
-            sys.stdout.flush()
+                # fill innings
+                scoreboard_inning_headers, \
+                away_line_score, home_line_score = self.build_innings(scoreboard_inning_headers, away_line_score,
+                                                                      home_line_score)
+                # Append team totals to line scores
+                scoreboard_inning_headers += scoreboard_totals_headers
+                away_line_score += away_totals
+                home_line_score += home_totals
 
-            # Sleep for a while and continue with loop
-            if not end_loop:
-                if self.game_status.upper() in GAME_STATUS_RUNNING:
-                    time.sleep(self.refresh_rate)
-                else:
-                    time.sleep(self.delay_refresh_rate)
+                # Build bars according to lengths
+                double_bar = '=' * ((len(scoreboard_inning_headers * 5) + len(scoreboard_inning_headers[0])) - 3)
+                single_bar = '-' * len(double_bar)
+
+                # build status output
+                game_status_info = self.build_game_status_info(len(double_bar)).strip('\n')
+
+                # ---- Print the scoreboard ----
+
+                # print game info line
+                print('{} @ {}: {} (Game #{})'.format(self.scoreboard_data.return_away_team(),
+                                                      self.scoreboard_data.return_home_team(),
+                                                      self.get_game_date_time(), game_pk))
+
+                print(double_bar)
+
+                # Print inning headers
+                output = ''
+                for x in scoreboard_inning_headers:
+                    output += ' {:<3}|'.format(x)
+                print(output)
+                print(single_bar)
+
+                # Print away line score
+                output = ''
+                for i, x in enumerate(away_line_score):
+                    if scoreboard_inning_headers[i] == 'R':
+                        output = output[:-1] + '|'
+                    output += ' {:<3} '.format(x)
+                print(output)
+
+                # Print home line score
+                output = ''
+                for i, y in enumerate(home_line_score):
+                    if scoreboard_inning_headers[i] == 'R':
+                        output = output[:-1] + '|'
+                    output += ' {:<3} '.format(y)
+                print(output)
+
+                print(single_bar)
+
+                # TODO one call to build_game_status_info and print it
+                # then set loop condition based on game_status
+
+                # Game over
+                # if self.game_status.upper() == 'GAME OVER':
+                #     end_loop = True
                 #
-                # if self.game_status[:7].upper() == 'DELAYED' or \
-                #         self.game_status.upper() == 'WARMUP' or \
-                #         self.game_status.upper() == ' PRE-GAME':
-                #     time.sleep(self.delay_refresh_rate)
-                # else:
-                #     time.sleep(self.refresh_rate)
+                # if self.game_status.upper() == 'FINAL':
+                #     end_loop = True
+                #
+                # if self.game_status.upper() == 'POSTPONED':
+                #     end_loop = True
+                #
+                # if self.game_status[:9].upper() == 'SUSPENDED':
+                #     end_loop = True
+
+                if self.game_status.upper() in GAME_STATUS_ENDED or self.game_status.upper()[:9] in GAME_STATUS_ENDED:
+                    end_loop = True
+
+                # Game not started
+                # if self.game_status.upper() == 'SCHEDULED':
+                #     end_loop = True
+
+                # if self.game_status.upper() == 'PRE-GAME':
+                #     end_loop = True
+
+                if self.game_status.upper() in GAME_STATUS_NOT_STARTED:
+                    end_loop = True
+
+                # if self.game_status.upper() == 'WARMUP':
+                #     end_loop = False
+
+                if self.game_status.upper() in GAME_STATUS_RUNNING:
+                    end_loop = False
+
+                # any other not 'in progress' state
+                # if self.game_status.upper() != 'IN PROGRESS':
+                #     print(game_status_info)
+
+                if self.game_status not in GAME_STATUS_RUNNING:
+                    print(game_status_info)
+
+                # Print game note if there is one
+                if self.game_note:
+                    if len(self.game_note) > len(double_bar):
+                        print('Note: ' + self.game_note[:len(double_bar) - 5])
+                        print('      ' + self.game_note[len(double_bar) - 5 + 1:])
+                    else:
+                        print('Note: ' + self.game_note)
+
+                # if self.game_status.upper() == 'IN PROGRESS':
+                #     print(game_status_info)
+
+                print(double_bar)
+
+                # Print (c) banner
+                print(COPYRIGHT)
+                sys.stdout.flush()
+
+                # Sleep for a while and continue with loop
+                if not end_loop:
+                    if self.game_status.upper() in GAME_STATUS_RUNNING:
+                        time.sleep(self.refresh_rate)
+                    else:
+                        time.sleep(self.delay_refresh_rate)
+                    #
+                    # if self.game_status[:7].upper() == 'DELAYED' or \
+                    #         self.game_status.upper() == 'WARMUP' or \
+                    #         self.game_status.upper() == ' PRE-GAME':
+                    #     time.sleep(self.delay_refresh_rate)
+                    # else:
+                    #     time.sleep(self.refresh_rate)
+        except KeyboardInterrupt:
+            print('Exit MLB Live Scoreboard')
 
     def build_game_status_info(self, sb_width):
         """
-
         :param sb_width:
         :return:
         """

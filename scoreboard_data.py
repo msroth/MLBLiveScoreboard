@@ -82,83 +82,98 @@ class ScoreboardData:
         last_home_batter_id = ''
         last_away_batter_id = ''
 
-        # get new data from MLB
-        self.live_data = self.api.fetch_live_feed_data(game_pk)
+        try:
+            # get new data from MLB
+            self.live_data = self.api.fetch_live_feed_data(game_pk)
 
-        # update stats data in database
-        game_status = self.live_data['gameData']['status']['detailedState']
+            # update stats data in database
+            game_status = self.live_data['gameData']['status']['detailedState']
 
-        if game_status.upper() not in ['FINAL', 'GAME OVER', 'SCHEDULED', 'WARMUP', 'PRE-GAME', 'POSTPONED']:
-            current_play = self.live_data['liveData']['plays']['currentPlay']['atBatIndex']
-            current_inning = self.live_data['liveData']['linescore']['currentInning']
-            inning_half = self.live_data['liveData']['linescore']['inningHalf']
-            inning_state = self.live_data['liveData']['linescore']['inningState']
+            if game_status.upper() not in ['FINAL', 'GAME OVER', 'SCHEDULED', 'WARMUP', 'PRE-GAME', 'POSTPONED']:
+                current_play = self.live_data['liveData']['plays']['currentPlay']['atBatIndex']
+                current_inning = self.live_data['liveData']['linescore']['currentInning']
+                inning_half = self.live_data['liveData']['linescore']['inningHalf']
+                inning_state = self.live_data['liveData']['linescore']['inningState']
 
-        # update last batter
-        if game_status.upper() in ['IN PROGRESS', 'DELAYED']:
-            last_home_batter_id, last_away_batter_id = self.return_last_batter_ids()
+            # update last batter
+            if game_status.upper() in ['IN PROGRESS', 'DELAYED']:
+                last_home_batter_id, last_away_batter_id = self.return_last_batter_ids()
 
-        # update current game status
-        self.update_status_table({'current_inning': current_inning,
-                                  'current_inning_half': inning_half,
-                                  'current_inning_state': inning_state,
-                                  'current_play_idx': current_play,
-                                  'home_last_batter_id' : last_home_batter_id,
-                                  'away_last_batter_id': last_away_batter_id,
-                                  'game_status': game_status,
-                                  'last_update': datetime.datetime.now()})
+            # update current game status
+            self.update_status_table({'current_inning': current_inning,
+                                      'current_inning_half': inning_half,
+                                      'current_inning_state': inning_state,
+                                      'current_play_idx': current_play,
+                                      'home_last_batter_id' : last_home_batter_id,
+                                      'away_last_batter_id': last_away_batter_id,
+                                      'game_status': game_status,
+                                      'last_update': datetime.datetime.now()})
+        except:
+            print('A data error occurred.  Sometimes this is due to a race condition')
+            print('between MLB data and the API.  Often restarting the scoreboard will')
+            print('clear the error.')
 
         return self.live_data
 
     def load_player_data(self):
         teams_data = self.return_boxscore_data()['teams']
 
-        # load database with player data for this game
+        try:
+            # load database with player data for this game
 
-        # away players
-        away_team = self.return_a_team_name(teams_data['away']['team']['id'])[2]
-        for player_id in teams_data['away']['players']:
-            id = teams_data['away']['players'][str(player_id)]['person']['id']
-            player_name = teams_data['away']['players'][str(player_id)]['person']['fullName']
-            player_jersey_no = teams_data['away']['players'][str(player_id)]['jerseyNumber']
-            self.scoreboard_db.db_insert('players', {'player_name': player_name,
-                                                  'player_number': player_jersey_no,
-                                                  'player_id': id,
-                                                  'player_team_abbrev': away_team})
+            # away players
+            away_team = self.return_a_team_name(teams_data['away']['team']['id'])[2]
+            for player_id in teams_data['away']['players']:
+                id = teams_data['away']['players'][str(player_id)]['person']['id']
+                player_name = teams_data['away']['players'][str(player_id)]['person']['fullName']
+                player_jersey_no = teams_data['away']['players'][str(player_id)]['jerseyNumber']
+                self.scoreboard_db.db_insert('players', {'player_name': player_name,
+                                                      'player_number': player_jersey_no,
+                                                      'player_id': id,
+                                                      'player_team_abbrev': away_team})
 
-        # home players
-        home_team = self.return_a_team_name(teams_data['home']['team']['id'])[2]
-        for player_id in teams_data['home']['players']:
-            id = teams_data['home']['players'][str(player_id)]['person']['id']
-            name = teams_data['home']['players'][str(player_id)]['person']['fullName']
-            jersey = teams_data['home']['players'][str(player_id)]['jerseyNumber']
-            self.scoreboard_db.db_insert('players', {'player_name': name,
-                                                     'player_number': jersey,
-                                                     'player_id': id,
-                                                     'player_team_abbrev': home_team})
+            # home players
+            home_team = self.return_a_team_name(teams_data['home']['team']['id'])[2]
+            for player_id in teams_data['home']['players']:
+                id = teams_data['home']['players'][str(player_id)]['person']['id']
+                name = teams_data['home']['players'][str(player_id)]['person']['fullName']
+                jersey = teams_data['home']['players'][str(player_id)]['jerseyNumber']
+                self.scoreboard_db.db_insert('players', {'player_name': name,
+                                                         'player_number': jersey,
+                                                         'player_id': id,
+                                                         'player_team_abbrev': home_team})
+        except:
+            print('A data error occurred.  Sometimes this is due to a race condition')
+            print('between MLB data and the API.  Often restarting the scoreboard will')
+            print('clear the error.')
 
     def return_last_batter_ids(self):
         home_batter_id = 0
         away_batter_id = 0
 
-        last_batter_inning = self.return_current_inning() - 1  # 0-based list
-        plays_data = self.live_data['liveData']['plays']
+        try:
+            last_batter_inning = self.return_current_inning() - 1  # 0-based list
+            plays_data = self.live_data['liveData']['plays']
 
-        if self.return_current_inning() > 1:
+            if self.return_current_inning() > 1:
 
-            if len(plays_data['playsByInning'][int(last_batter_inning)]['top']) > 0:
-                last_away_batter_play_idx = plays_data['playsByInning'][int(last_batter_inning)]['top'][-1]
-            else:
-                # drop back to last inning
-                last_away_batter_play_idx = plays_data['playsByInning'][int(last_batter_inning) - 1]['top'][-1]
-            away_batter_id = plays_data['allPlays'][last_away_batter_play_idx]['matchup']['batter']['id']
+                if len(plays_data['playsByInning'][int(last_batter_inning)]['top']) > 0:
+                    last_away_batter_play_idx = plays_data['playsByInning'][int(last_batter_inning)]['top'][-1]
+                else:
+                    # drop back to last inning
+                    last_away_batter_play_idx = plays_data['playsByInning'][int(last_batter_inning) - 1]['top'][-1]
+                away_batter_id = plays_data['allPlays'][last_away_batter_play_idx]['matchup']['batter']['id']
 
-            if len(plays_data['playsByInning'][int(last_batter_inning)]['bottom']) > 0:
-                last_home_batter_play_idx = plays_data['playsByInning'][int(last_batter_inning)]['bottom'][-1]
-            else:
-                # drop back to last inning
-                last_home_batter_play_idx = plays_data['playsByInning'][int(last_batter_inning) - 1]['bottom'][-1]
-            home_batter_id = plays_data['allPlays'][last_home_batter_play_idx]['matchup']['batter']['id']
+                if len(plays_data['playsByInning'][int(last_batter_inning)]['bottom']) > 0:
+                    last_home_batter_play_idx = plays_data['playsByInning'][int(last_batter_inning)]['bottom'][-1]
+                else:
+                    # drop back to last inning
+                    last_home_batter_play_idx = plays_data['playsByInning'][int(last_batter_inning) - 1]['bottom'][-1]
+                home_batter_id = plays_data['allPlays'][last_home_batter_play_idx]['matchup']['batter']['id']
+        except:
+            print('A data error occurred.  Sometimes this is due to a race condition')
+            print('between MLB data and the API.  Often restarting the scoreboard will')
+            print('clear the error.')
 
         return home_batter_id, away_batter_id
 
@@ -272,45 +287,75 @@ class ScoreboardData:
             return 'UNK'
 
     def return_last_play_data(self):
-        play_idx = self.return_current_play_index() - 1
-        data = self.return_a_play_data(play_idx)
+        try:
+            play_idx = self.return_current_play_index() - 1
+            data = self.return_a_play_data(play_idx)
+        except:
+            print('A data error occurred.  Sometimes this is due to a race condition')
+            print('between MLB data and the API.  Often restarting the scoreboard will')
+            print('clear the error.')
         return data
 
     def return_a_play_data(self, play_idx):
-        data = self.live_data['liveData']['plays']['allPlays'][int(play_idx)]
+        try:
+            data = self.live_data['liveData']['plays']['allPlays'][int(play_idx)]
+        except:
+            print('A data error occurred.  Sometimes this is due to a race condition')
+            print('between MLB data and the API.  Often restarting the scoreboard will')
+            print('clear the error.')
         return data
 
     def return_current_play_data(self):
-        data = self.live_data['liveData']['plays']['currentPlay']
+        try:
+            data = self.live_data['liveData']['plays']['currentPlay']
+        except:
+            print('A data error occurred.  Sometimes this is due to a race condition')
+            print('between MLB data and the API.  Often restarting the scoreboard will')
+            print('clear the error.')
         return data
 
     def return_linescore_data(self):
-        data = self.live_data['liveData']['linescore']
+        try:
+            data = self.live_data['liveData']['linescore']
+        except:
+            print('A data error occurred.  Sometimes this is due to a race condition')
+            print('between MLB data and the API.  Often restarting the scoreboard will')
+            print('clear the error.')
         return data
 
     def return_boxscore_data(self):
-        data = self.live_data['liveData']['boxscore']
+        try:
+            data = self.live_data['liveData']['boxscore']
+        except:
+            print('A data error occurred.  Sometimes this is due to a race condition')
+            print('between MLB data and the API.  Often restarting the scoreboard will')
+            print('clear the error.')
         return data
 
     def load_game_data(self, game_pk):
 
-        # load data for this game into database
+        try:
+            # load data for this game into database
 
-        # load player data
-        self.load_player_data()
+            # load player data
+            self.load_player_data()
 
-        # get home and away team ids
-        teams_data = self.return_boxscore_data()['teams']
-        home_team_id = teams_data['home']['team']['id']
-        away_team_id = teams_data['away']['team']['id']
+            # get home and away team ids
+            teams_data = self.return_boxscore_data()['teams']
+            home_team_id = teams_data['home']['team']['id']
+            away_team_id = teams_data['away']['team']['id']
 
-        # write game data to database
-        self.update_game_table({'home_team_id': home_team_id,
-                                'away_team_id': away_team_id,
-                                'home_team_abbrev': self.return_a_team_name(home_team_id)[2],
-                                'away_team_abbrev': self.return_a_team_name(away_team_id)[2],
-                                'home_team_name': self.return_a_team_name(home_team_id)[0],
-                                'away_team_name': self.return_a_team_name(away_team_id)[0],
-                                'game_pk': game_pk})
+            # write game data to database
+            self.update_game_table({'home_team_id': home_team_id,
+                                    'away_team_id': away_team_id,
+                                    'home_team_abbrev': self.return_a_team_name(home_team_id)[2],
+                                    'away_team_abbrev': self.return_a_team_name(away_team_id)[2],
+                                    'home_team_name': self.return_a_team_name(home_team_id)[0],
+                                    'away_team_name': self.return_a_team_name(away_team_id)[0],
+                                    'game_pk': game_pk})
+        except:
+            print('A data error occurred.  Sometimes this is due to a race condition')
+            print('between MLB data and the API.  Often restarting the scoreboard will')
+            print('clear the error.')
 
-# <SGD><
+# <SDG><
