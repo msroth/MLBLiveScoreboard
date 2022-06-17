@@ -37,7 +37,7 @@ https://github.com/toddrob99/MLB-StatsAPI/wiki
 
 """
 
-VERSION = '0.8'
+VERSION = '0.81'
 COPYRIGHT = '(C) 2018-2022 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 GAME_STATUS_ENDED = ['GAME OVER', 'FINAL', 'POSTPONED', 'SUSPENDED']
