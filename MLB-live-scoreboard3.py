@@ -1190,7 +1190,7 @@ if __name__ == "__main__":
 
     else:
         schedule = scoreboard.api.fetch_schedule_data(game_date)
-        if schedule['totalGames'] > 0:
+        if schedule['totalGames'] == 0:
             print('MLB day off; no games scheduled.\n')  
             exit
         elif args.home_team is not None and args.away_team is not None and args.game_date:
