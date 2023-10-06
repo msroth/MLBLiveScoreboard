@@ -37,7 +37,7 @@ https://github.com/toddrob99/MLB-StatsAPI/wiki
 
 """
 
-VERSION = '0.82'
+VERSION = '0.83'
 COPYRIGHT = '(C) 2018-2023 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 GAME_STATUS_ENDED = ['GAME OVER', 'FINAL', 'POSTPONED', 'SUSPENDED']
@@ -1130,21 +1130,64 @@ if __name__ == "__main__":
 
     # use configParser to parse config file
 
-    parser = argparse.ArgumentParser(description='Use --team to load current game for your favorite team, or ' +
-                                                 'combination of --away, --home, and --date to load a specific game',
-                                     epilog='examples: >python MLB-live-scoreboard.py --team=WSH\n' +
-                                     '          >python MLB-live-scoreboard.py --away=WSH --home=PHI --date=04/10/2019')
+    # add --teams to list team trigraphs
+    # add --games with --date to list games
+    # add --gamePk to load specific game
+    
+    parser = argparse.ArgumentParser(prog='MLB-live-scoreboard',
+                                    # description='Use --team=<tri> to load current game for your favorite team, or ' +
+                                    #              'combination of --away=<tri>, --home=<tri>, and --date=<mm/dd/yyyy> to ' +
+                                    #              'load a specific game. --all_teams to list team tri-graphs, or --date=<mm/dd/yyyy> ' +
+                                    #              'to list games for specific date.  --gamepk=<gamepk> to load a specific game.')
+                                    description = '''Valid team tri-graphs:
+  Arizona Diamondbacks	= ARI
+  Atlanta Braves	    = ATL
+  Baltimore Orioles	    = BAL
+  Boston Red Sox	    = BOS
+  Chicago Cubs	        = CHC
+  Cincinnati Reds	    = CIN
+  Cleveland Indians	    = CLE
+  Colorado Rockies	    = COL
+  Chicago White Sox	    = CWS
+  Detroit Tigers	    = DET
+  Houston Astros	    = HOU
+  Kansas City Royals	= KC
+  Los Angeles Angels	= LAA
+  Los Angeles Dodgers	= LAD
+  Miami Marlins	        = MIA
+  Milwaukee Brewers	    = MIL
+  Minnesota Twins	    = MIN
+  New York Mets	        = NYM
+  New York Yankees	    = NYY
+  Oakland Athletics	    = OAK
+  Philadelphia Phillies	= PHI
+  Pittsburgh Pirates	= PIT
+  San Diego Padres	    = SD
+  Seattle Mariners	    = SEA
+  San Francisco Giants	= SF
+  St. Louis Cardinals	= STL
+  Tampa Bay Rays	    = TB
+  Texas Rangers	        = TEX
+  Toronto Blue Jays	    = TOR
+  Washington Nationals	= WSH''')
+    
     parser.add_argument('--team', required=False, dest='favorite_team',
                         help='Tri-graph for favorite team.')
     parser.add_argument('--away', required=False, dest='away_team',
                         help='Tri-graph for away team.')
     parser.add_argument('--home', required=False, dest='home_team',
                         help='Tri-graph for home team.')
-    parser.add_argument('--date', required=False, dest='game_date', help='Date of game MM/DD/YYYY.')
+    parser.add_argument('--date', required=False, dest='game_date',
+                        help='Date of game MM/DD/YYYY.')
+    parser.add_argument('--gamepk', required=False, dest='gamepk',
+                        help='Load specific game')
+    parser.add_argument('--all_teams', required=False, default=False, action='store_true',
+                        help='List all team tri-graphs')
     args = parser.parse_args()
 
+    # today's date
     game_date = datetime.datetime.now().strftime('%m/%d/%Y')
-
+    
     # no args -- use team in config.py
     if len(sys.argv) == 1:
         favorite_team = config.SB_CONFIG['team']
@@ -1153,9 +1196,9 @@ if __name__ == "__main__":
             sys.exit('ERROR: Invalid team name found in config.py: {}'.format(favorite_team))
         else:
             game_pk = scoreboard.find_gamepk(favorite_team, '', game_date)
-
+            
     # use favorite team arg
-    elif args.favorite_team is not None:
+    elif args.favorite_team is not None and args.game_date is None:
         favorite_team = args.favorite_team
         if not scoreboard.validate_team_name(favorite_team):
             _usage()
@@ -1163,6 +1206,44 @@ if __name__ == "__main__":
         else:
             game_pk = scoreboard.find_gamepk(favorite_team, '', game_date)
 
+    # list trigraphs
+    elif args.all_teams == True:
+        print('\nMLB Team Tri-graphs:')
+        print(scoreboard.get_team_abbrevs_list())
+        sys.exit()
+        
+    # list games for specific date
+    elif args.game_date is not None and args.favorite_team is None and args.home_team is None and args.away_team is None:
+        if not _validate_date(args.game_date):
+            _usage()
+            sys.exit('ERROR:  Invalid date: {}'.format(args.game_date))
+        else:
+            schedule = scoreboard.api.fetch_schedule_data(args.game_date)
+            if schedule['totalGames'] > 0:
+                print('Games on {}:'.format(args.game_date))
+                for games in schedule['dates'][0]['games']:
+                    print('{} - {} @ {}'.format(games['gamePk'], games['teams']['away']['team']['name'], games['teams']['home']['team']['name']))
+        sys.exit()
+        
+    # one team and a date
+    elif args.game_date is not None and (args.favorite_team is not None or args.home_team is not None or args.away_team is not None):
+        team = ''
+        if args.favorite_team is not None:
+            team = args.favorite_team
+        elif args.home_team is not None:
+            team = args.home_team
+        elif args.away_team is not None:
+            team = args.away_team
+        
+        if not scoreboard.validate_team_name(team):
+            _usage()
+            sys.exit('ERROR: Invalid team name: {}'.format(team))
+        if not _validate_date(args.game_date):
+            _usage()
+            sys.exit('ERROR:  Invalid date: {}'.format(args.game_date)) 
+
+        game_pk = scoreboard.find_gamepk(team,'',args.game_date)
+            
     # use full command line
     elif args.away_team is not None and args.home_team is not None and args.game_date is not None:
         if not scoreboard.validate_team_name(args.away_team):
@@ -1180,6 +1261,10 @@ if __name__ == "__main__":
         # config/args ok, find a game
         game_pk = scoreboard.find_gamepk(args.home_team, args.away_team, args.game_date)
 
+    # load by gamepk
+    elif args.gamepk is not None:
+        game_pk = args.gamepk
+        
     else:
         parser.print_usage()
 
@@ -1192,14 +1277,14 @@ if __name__ == "__main__":
         schedule = scoreboard.api.fetch_schedule_data(game_date)
         if schedule['totalGames'] == 0:
             print('MLB day off; no games scheduled.\n')  
-            exit
+            sys.exit()
         elif args.home_team is not None and args.away_team is not None and args.game_date:
             print('\nNo game found for {} at {} on {}'.format(args.away_team, args.home_team, args.game_date))
         elif favorite_team is not None:
             print('\n{} has no scheduled game(s) today.\n'.format(favorite_team))
         else:
             print('\nSomething went wrong.')
-            exit
+            sys.exit()
 
         # get schedule of games 
         if schedule['totalGames'] > 0:
