@@ -1189,22 +1189,23 @@ if __name__ == "__main__":
         scoreboard.run()
 
     else:
-        if args.home_team is not None and args.away_team is not None and args.game_date:
+        schedule = scoreboard.api.fetch_schedule_data(game_date)
+        if schedule['totalGames'] > 0:
+            print('MLB day off; no games scheduled.\n')  
+            exit
+        elif args.home_team is not None and args.away_team is not None and args.game_date:
             print('\nNo game found for {} at {} on {}'.format(args.away_team, args.home_team, args.game_date))
         elif favorite_team is not None:
             print('\n{} has no scheduled game(s) today.\n'.format(favorite_team))
         else:
             print('\nSomething went wrong.')
+            exit
 
         # get schedule of games 
-        schedule = scoreboard.api.fetch_schedule_data(game_date)
         if schedule['totalGames'] > 0:
             print('Today\'s games:')
             for games in schedule['dates'][0]['games']:
                 print('{} - {} @ {}'.format(games['gamePk'], games['teams']['away']['team']['name'], games['teams']['home']['team']['name']))
-        else:
-            print('MLB day off; no games scheduled.\n')
-
 
 
 # <SDG><
