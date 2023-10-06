@@ -37,13 +37,12 @@ https://github.com/toddrob99/MLB-StatsAPI/wiki
 
 """
 
-VERSION = '0.81'
-COPYRIGHT = '(C) 2018-2022 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
+VERSION = '0.82'
+COPYRIGHT = '(C) 2018-2023 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 GAME_STATUS_ENDED = ['GAME OVER', 'FINAL', 'POSTPONED', 'SUSPENDED']
 GAME_STATUS_RUNNING = ['IN PROGRESS', 'DELAYED']
 GAME_STATUS_NOT_STARTED = ['SCHEDULED', 'WARMUP', 'PRE-GAME']
-# GAME_STATUS_DELAYED = ['DELAYED']
 
 
 class MLBLiveScoreboard:
@@ -90,6 +89,9 @@ class MLBLiveScoreboard:
             # get schedule of games today
             schedule = self.api.fetch_schedule_data(game_date)
 
+            if schedule['totalGames'] == 0:
+                return 0
+            
             # loop through games looking for team(s)
             for games in schedule['dates'][0]['games']:
 
@@ -415,7 +417,7 @@ class MLBLiveScoreboard:
         pitcher_stats = self.get_pitcher_stats(pitcher_id)
 
         # return pitcher-batter matchup line
-        return 'Pitcher: {} ({} ERA) - Batter: {} ({}-{}, {} AVG)'.format(pitcher_name, pitcher_stats[2], batter_name,
+        return 'Pitcher: {} ({} ERA) \n            | Batter : {} ({}-{}, {} AVG)'.format(pitcher_name, pitcher_stats[2],                                                                  batter_name,
                                                                           batter_stats[1], batter_stats[2],
                                                                           batter_stats[3])
 
@@ -1190,8 +1192,19 @@ if __name__ == "__main__":
         if args.home_team is not None and args.away_team is not None and args.game_date:
             print('\nNo game found for {} at {} on {}'.format(args.away_team, args.home_team, args.game_date))
         elif favorite_team is not None:
-            print('\n{} has no scheduled game today.'.format(favorite_team))
+            print('\n{} has no scheduled game(s) today.\n'.format(favorite_team))
         else:
             print('\nSomething went wrong.')
+
+        # get schedule of games 
+        schedule = scoreboard.api.fetch_schedule_data(game_date)
+        if schedule['totalGames'] > 0:
+            print('Today\'s games:')
+            for games in schedule['dates'][0]['games']:
+                print('{} - {} @ {}'.format(games['gamePk'], games['teams']['away']['team']['name'], games['teams']['home']['team']['name']))
+        else:
+            print('MLB day off; no games scheduled.\n')
+
+
 
 # <SDG><
