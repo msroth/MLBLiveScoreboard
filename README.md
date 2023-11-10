@@ -6,7 +6,6 @@ NAME:    MLB-live-scoreboard3.py (C) 2019 - 2021
 PURPOSE: To produce a simple, live scoreboard to track MLB game play
          on your computer.
 
-         EXAMPLE OUTPUT
 
          Retrieving game data from MLB (07/17/2019 21:06:37)...
          Washington Nationals @ Baltimore Orioles: 2019/07/17 7:05PM (Game #564977)
@@ -21,7 +20,7 @@ PURPOSE: To produce a simple, live scoreboard to track MLB game play
          [ ]   [X]  | eft fielder Anthony Santander.
             [o]     |
          ===========================================================================
-         (C) 2018-2021 MSRoth, MLB Live Scoreboard v0.8
+         (C) 2018-2023 MSRoth, MLB Live Scoreboard v0.8
 
 AUTHOR:  MSRoth
 
@@ -77,8 +76,6 @@ COMMENTS:
       
     - this script does not have a lot of error detection and sometimes encounters a race condition with data from MLB.  
       If that happens, just restart it and it usually clears up.
-      
-    - this script sometimes loses baserunners  (working on it).
     
     - this is the first Python program I have ever written, so I am sure there are a lot of style mistakes and use of brute 
       force where finesse is available to a more experienced programmer.
