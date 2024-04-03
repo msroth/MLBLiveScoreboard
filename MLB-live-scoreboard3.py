@@ -12,9 +12,6 @@ import mlb_api
 import scoreboard_data
 
 """
-MLB API docs and tester
-http://statsapi-default-elb-prod-876255662.us-east-1.elb.amazonaws.com/docs/#!
-
 JSON viewer
 http://jsonviewer.stack.hu/
 
@@ -35,10 +32,26 @@ http://statsapi.mlb.com/api/v1/schedule?sportId=1&date=08/11/2021&fields?gamePk=
 See MLB Stats API
 https://github.com/toddrob99/MLB-StatsAPI/wiki
 
+
+iPython
+import statsapi
+import logging
+logger = logging.getLogger('statsapi')
+logger.setLevel(logging.DEBUG)
+rootLogger = logging.getLogger()
+rootLogger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(levelname)8s - %(name)s(%(thread)s) - %(message)s")
+ch.setFormatter(formatter)
+rootLogger.addHandler(ch)
+
+print( statsapi.player_stats(next(x['id'] for x in statsapi.get('sports_players',{'season':2008,'gameType':'W'})['people'] if x['fullName']=='Chase Utley'), 'hitting', 'career') )
+
+
 """
 
-VERSION = '0.83'
-COPYRIGHT = '(C) 2018-2023 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
+VERSION = '0.84'
+COPYRIGHT = '(C) 2018-2024 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 GAME_STATUS_ENDED = ['GAME OVER', 'FINAL', 'POSTPONED', 'SUSPENDED']
 GAME_STATUS_RUNNING = ['IN PROGRESS', 'DELAYED']
@@ -1222,7 +1235,7 @@ if __name__ == "__main__":
             if schedule['totalGames'] > 0:
                 print('Games on {}:'.format(args.game_date))
                 for games in schedule['dates'][0]['games']:
-                    print('{} - {} @ {}'.format(games['gamePk'], games['teams']['away']['team']['name'], games['teams']['home']['team']['name']))
+                    print('{} - {} @ {}, {}'.format(games['gamePk'], games['teams']['away']['team']['name'], games['teams']['home']['team']['name'], datetime.datetime.strptime(games['gameDate'],'%Y-%m-%dT%H:%M:%S%z').time()))
         sys.exit()
         
     # one team and a date
