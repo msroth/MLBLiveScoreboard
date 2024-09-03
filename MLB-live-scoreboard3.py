@@ -7,6 +7,7 @@ import re
 import textwrap
 import argparse
 # import configparser
+import keyboard
 
 import mlb_api
 import scoreboard_data
@@ -50,7 +51,7 @@ print( statsapi.player_stats(next(x['id'] for x in statsapi.get('sports_players'
 
 """
 
-VERSION = '0.84'
+VERSION = '0.91'
 COPYRIGHT = '(C) 2018-2024 MSRoth, MLB Live Scoreboard v{}'.format(VERSION)
 
 GAME_STATUS_ENDED = ['GAME OVER', 'FINAL', 'POSTPONED', 'SUSPENDED']
@@ -104,7 +105,7 @@ class MLBLiveScoreboard:
 
             if schedule['totalGames'] == 0:
                 return 0
-            
+
             # loop through games looking for team(s)
             for games in schedule['dates'][0]['games']:
 
@@ -278,9 +279,12 @@ class MLBLiveScoreboard:
         # away
         for pitcher in pitcher_stats['teams']['away']['players']:
             if 'ID' + str(pitcher_id) == pitcher:
-                stats[2] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['era']
-                stats[0] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['wins']
-                stats[1] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['losses']
+                stats[2] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
+                    'era']
+                stats[0] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
+                    'wins']
+                stats[1] = pitcher_stats['teams']['away']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
+                    'losses']
                 found = True
                 break
 
@@ -289,11 +293,14 @@ class MLBLiveScoreboard:
             for pitcher in pitcher_stats['teams']['home']['players']:
                 if 'ID' + str(pitcher_id) == pitcher:
                     stats[2] = \
-                    pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['era']
+                        pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
+                            'era']
                     stats[0] = \
-                    pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['wins']
+                        pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
+                            'wins']
                     stats[1] = \
-                    pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching']['losses']
+                        pitcher_stats['teams']['home']['players']['ID' + str(pitcher_id)]['seasonStats']['pitching'][
+                            'losses']
                     found = True
                     break
 
@@ -400,7 +407,6 @@ class MLBLiveScoreboard:
 
         return bases_lines
 
-
     def build_pitcher_batter_matchup_line(self):
         """
 
@@ -430,10 +436,11 @@ class MLBLiveScoreboard:
         pitcher_stats = self.get_pitcher_stats(pitcher_id)
 
         # return pitcher-batter matchup line
-        return 'Pitcher: {} ({} ERA) \n            | Batter : {} ({}-{}, {} AVG)'.format(pitcher_name, pitcher_stats[2],                                                                  batter_name,
-                                                                          batter_stats[1], batter_stats[2],
-                                                                          batter_stats[3])
-
+        return 'Pitcher: {} ({} ERA) \n            | Batter : {} ({}-{}, {} AVG)'.format(pitcher_name, pitcher_stats[2],
+                                                                                         batter_name,
+                                                                                         batter_stats[1],
+                                                                                         batter_stats[2],
+                                                                                         batter_stats[3])
 
     def run(self):
 
@@ -475,7 +482,9 @@ class MLBLiveScoreboard:
                 # Enter inning half or game status in first element of inning header
                 team_name_length = max(len(away_line_score[0]), len(home_line_score[0]))
 
-                if self.game_status.upper() != 'IN PROGRESS' and self.game_status[:7].upper() != 'DELAYED' and self.game_status[:9].upper() != 'SUSPENDED':
+                if self.game_status.upper() != 'IN PROGRESS' and self.game_status[
+                                                                 :7].upper() != 'DELAYED' and self.game_status[
+                                                                                              :9].upper() != 'SUSPENDED':
                     inning_half = ' '
                 else:
                     inning_half = '{} {}'.format(self.get_current_inning_half(), self.get_current_inning())
@@ -598,7 +607,28 @@ class MLBLiveScoreboard:
                 # Sleep for a while and continue with loop
                 if not end_loop:
                     if self.game_status.upper() in GAME_STATUS_RUNNING:
-                        time.sleep(self.refresh_rate)
+                        loop_cnt = 0
+                        while loop_cnt < self.refresh_rate:
+                            if keyboard.is_pressed('q') or keyboard.is_pressed('esc') or keyboard.is_pressed('ctrl+c'):
+                                print(loop_cnt)
+                                quit(0)
+
+                            if keyboard.is_pressed('l'):
+                                self.print_lineups()
+                                break
+
+                            if keyboard.is_pressed('b'):
+                                # print formatted box score
+                                print('box score')
+                                break
+
+                            time.sleep(1)
+                            loop_cnt += 1
+
+                    
+                    
+                    #if self.game_status.upper() in GAME_STATUS_RUNNING:
+                        #time.sleep(self.refresh_rate)
                     else:
                         time.sleep(self.delay_refresh_rate)
                     #
@@ -660,8 +690,8 @@ class MLBLiveScoreboard:
 
                 # format status to fit on screen
                 fmt_bases_commentary = self.format_status_lines_with_diamond(base_runners, bso_line, match_up_line,
-                                                                        commentary_line,
-                                                                        last_pitch, sb_width)
+                                                                             commentary_line,
+                                                                             last_pitch, sb_width)
 
                 # add the formatted lines to the output string
                 for line in fmt_bases_commentary:
@@ -683,7 +713,7 @@ class MLBLiveScoreboard:
             status_line = '{}\n{}'.format(self.build_win_lose_pitcher_line(), game_status)
 
         # scheduled or warmup or some other delay
-        #elif game_status.upper() == 'SCHEDULED' or game_status.upper() == 'WARMUP' or game_status.upper() == 'PRE-GAME':
+        # elif game_status.upper() == 'SCHEDULED' or game_status.upper() == 'WARMUP' or game_status.upper() == 'PRE-GAME':
         elif game_status.upper() in GAME_STATUS_NOT_STARTED:
             status_line = '{}\n{}'.format(self.build_sched_pitchers_line(), game_status)
 
@@ -715,6 +745,35 @@ class MLBLiveScoreboard:
                         batting_order[batting_order.index(player_replaced_id)] = player_id
 
         return batting_order
+
+    def print_lineups(self):
+
+        teams_data = self.return_boxscore_data()['teams']
+
+        # away players
+        away_team = self.return_a_team_name(teams_data['away']['team']['id'])[2]
+        print()
+        print(away_team + ' Lineup')
+        print('-----------------------------')
+        for player_id in teams_data['away']['players']:
+            id = teams_data['away']['players'][str(player_id)]['person']['id']
+            player_name = teams_data['away']['players'][str(player_id)]['person']['fullName']
+            player_jersey_no = teams_data['away']['players'][str(player_id)]['jerseyNumber']
+            print('#{} {}'.format(player_jersey_no, player_name))
+
+        # home players
+        home_team = self.return_a_team_name(teams_data['home']['team']['id'])[2]
+        print()
+        print(home_team + ' Lineup')
+        print('-----------------------------')
+        for player_id in teams_data['home']['players']:
+            id = teams_data['home']['players'][str(player_id)]['person']['id']
+            player_name = teams_data['home']['players'][str(player_id)]['person']['fullName']
+            player_jersey_no = teams_data['home']['players'][str(player_id)]['jerseyNumber']
+            print('#{} {}'.format(player_jersey_no, player_name))
+
+        print()
+        _ = input('Press [ENTER] to continue')
 
     def build_dueup_batters_line(self):
         """
@@ -770,7 +829,7 @@ class MLBLiveScoreboard:
                 batting_order_idx = batting_order.index(last_batter_id)
 
                 # start with next batter
-                #batting_order_idx += 1
+                # batting_order_idx += 1
                 for j in range(3):  # get next three batters, rotate to top of order if at end
                     batting_order_idx += 1
                     if batting_order_idx > 8:
@@ -800,7 +859,6 @@ class MLBLiveScoreboard:
         except Exception as ex:
             return 'Due up:  TBD'
 
-
     def get_batter_stats(self, batter_id):
         """
 
@@ -812,7 +870,7 @@ class MLBLiveScoreboard:
         found = False
 
         boxscore = self.get_boxscore_data()
-        #boxscore = self.livedata['liveData']['boxscore']
+        # boxscore = self.livedata['liveData']['boxscore']
 
         try:
             # # away
@@ -830,7 +888,8 @@ class MLBLiveScoreboard:
                     stats[0] = boxscore['teams']['away']['players']['ID' + str(batter_id)]['person']['fullName']
                     stats[2] = boxscore['teams']['away']['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
                     stats[1] = boxscore['teams']['away']['players']['ID' + str(batter_id)]['stats']['batting']['hits']
-                    stats[3] = boxscore['teams']['away']['players']['ID' + str(batter_id)]['seasonStats']['batting']['avg']
+                    stats[3] = boxscore['teams']['away']['players']['ID' + str(batter_id)]['seasonStats']['batting'][
+                        'avg']
                     found = True
                     break
 
@@ -839,16 +898,18 @@ class MLBLiveScoreboard:
                     for player in boxscore['teams']['home']['players']:
                         if player == 'ID' + str(batter_id):
                             stats[0] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['person']['fullName']
-                            stats[2] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting']['atBats']
-                            stats[1] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting']['hits']
-                            stats[3] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['seasonStats']['batting']['avg']
+                            stats[2] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting'][
+                                'atBats']
+                            stats[1] = boxscore['teams']['home']['players']['ID' + str(batter_id)]['stats']['batting'][
+                                'hits']
+                            stats[3] = \
+                            boxscore['teams']['home']['players']['ID' + str(batter_id)]['seasonStats']['batting']['avg']
                             break
 
         except Exception as ex:
             stats = ['', '', '', '']
 
         return stats
-
 
     def get_last_play_description(self):
         """
@@ -877,7 +938,7 @@ class MLBLiveScoreboard:
             current_inning_half = self.get_current_inning_half()
             inning_desc = ''
             if int(current_inning) != int(play_inning) or \
-                current_inning_half.upper() != play_inning_half.upper():
+                    current_inning_half.upper() != play_inning_half.upper():
                 inning_desc = '({} {})'.format(play_inning_half, play_inning)
 
             # clean if up
@@ -913,7 +974,8 @@ class MLBLiveScoreboard:
                 pitch_number = events[last_event]['pitchNumber']
 
             if pitch_speed != '':
-                pitch_str = 'Last pitch: #{} {} ({} MPH) - {}'.format(pitch_number, pitch_type, pitch_speed, pitch_result)
+                pitch_str = 'Last pitch: #{} {} ({} MPH) - {}'.format(pitch_number, pitch_type, pitch_speed,
+                                                                      pitch_result)
 
         except Exception as ex:
             return ''
@@ -937,7 +999,6 @@ class MLBLiveScoreboard:
 
         # return game date with time
         return '{} {}'.format(game_date, game_time)
-
 
     def build_team_names_with_record(self, away_line, home_line):
         """
@@ -1078,8 +1139,10 @@ def _validate_date(game_date):
         return False
     return True
 
+
 def _usage():
     print(USAGE_DOC)
+
 
 USAGE_DOC = """
 Usage:
@@ -1146,13 +1209,13 @@ if __name__ == "__main__":
     # add --teams to list team trigraphs
     # add --games with --date to list games
     # add --gamePk to load specific game
-    
+
     parser = argparse.ArgumentParser(prog='MLB-live-scoreboard',
-                                    # description='Use --team=<tri> to load current game for your favorite team, or ' +
-                                    #              'combination of --away=<tri>, --home=<tri>, and --date=<mm/dd/yyyy> to ' +
-                                    #              'load a specific game. --all_teams to list team tri-graphs, or --date=<mm/dd/yyyy> ' +
-                                    #              'to list games for specific date.  --gamepk=<gamepk> to load a specific game.')
-                                    description = '''Valid team tri-graphs:
+                                     # description='Use --team=<tri> to load current game for your favorite team, or ' +
+                                     #              'combination of --away=<tri>, --home=<tri>, and --date=<mm/dd/yyyy> to ' +
+                                     #              'load a specific game. --all_teams to list team tri-graphs, or --date=<mm/dd/yyyy> ' +
+                                     #              'to list games for specific date.  --gamepk=<gamepk> to load a specific game.')
+                                     description='''Valid team tri-graphs:
   Arizona Diamondbacks	= ARI
   Atlanta Braves	    = ATL
   Baltimore Orioles	    = BAL
@@ -1183,7 +1246,7 @@ if __name__ == "__main__":
   Texas Rangers	        = TEX
   Toronto Blue Jays	    = TOR
   Washington Nationals	= WSH''')
-    
+
     parser.add_argument('--team', required=False, dest='favorite_team',
                         help='Tri-graph for favorite team.')
     parser.add_argument('--away', required=False, dest='away_team',
@@ -1200,7 +1263,7 @@ if __name__ == "__main__":
 
     # today's date
     game_date = datetime.datetime.now().strftime('%m/%d/%Y')
-    
+
     # no args -- use team in config.py
     if len(sys.argv) == 1:
         favorite_team = config.SB_CONFIG['team']
@@ -1209,7 +1272,7 @@ if __name__ == "__main__":
             sys.exit('ERROR: Invalid team name found in config.py: {}'.format(favorite_team))
         else:
             game_pk = scoreboard.find_gamepk(favorite_team, '', game_date)
-            
+
     # use favorite team arg
     elif args.favorite_team is not None and args.game_date is None:
         favorite_team = args.favorite_team
@@ -1224,7 +1287,7 @@ if __name__ == "__main__":
         print('\nMLB Team Tri-graphs:')
         print(scoreboard.get_team_abbrevs_list())
         sys.exit()
-        
+
     # list games for specific date
     elif args.game_date is not None and args.favorite_team is None and args.home_team is None and args.away_team is None:
         if not _validate_date(args.game_date):
@@ -1235,11 +1298,17 @@ if __name__ == "__main__":
             if schedule['totalGames'] > 0:
                 print('Games on {}:'.format(args.game_date))
                 for games in schedule['dates'][0]['games']:
-                    print('{} - {} @ {}, {}'.format(games['gamePk'], games['teams']['away']['team']['name'], games['teams']['home']['team']['name'], datetime.datetime.strptime(games['gameDate'],'%Y-%m-%dT%H:%M:%S%z').time()))
+                    #print('{} - {} @ {}, {}'.format(games['gamePk'], games['teams']['away']['team']['name'],
+                    #                                games['teams']['home']['team']['name'],
+                    #                                datetime.datetime.strptime(games['gameDate'],
+                    #                                                           '%Y-%m-%dT%H:%M:%S%z').time()))
+                    zTime = datetime.datetime.strptime(games['gameDate'],'%Y-%m-%dT%H:%M:%S%z').astimezone(None).time()
+                    print('{} - {} @ {} - {}'.format(games['gamePk'], games['teams']['away']['team']['name'],games['teams']['home']['team']['name'],zTime))
         sys.exit()
-        
+
     # one team and a date
-    elif args.game_date is not None and (args.favorite_team is not None or args.home_team is not None or args.away_team is not None):
+    elif args.game_date is not None and (
+            args.favorite_team is not None or args.home_team is not None or args.away_team is not None):
         team = ''
         if args.favorite_team is not None:
             team = args.favorite_team
@@ -1247,16 +1316,16 @@ if __name__ == "__main__":
             team = args.home_team
         elif args.away_team is not None:
             team = args.away_team
-        
+
         if not scoreboard.validate_team_name(team):
             _usage()
             sys.exit('ERROR: Invalid team name: {}'.format(team))
         if not _validate_date(args.game_date):
             _usage()
-            sys.exit('ERROR:  Invalid date: {}'.format(args.game_date)) 
+            sys.exit('ERROR:  Invalid date: {}'.format(args.game_date))
 
-        game_pk = scoreboard.find_gamepk(team,'',args.game_date)
-            
+        game_pk = scoreboard.find_gamepk(team, '', args.game_date)
+
     # use full command line
     elif args.away_team is not None and args.home_team is not None and args.game_date is not None:
         if not scoreboard.validate_team_name(args.away_team):
@@ -1277,7 +1346,7 @@ if __name__ == "__main__":
     # load by gamepk
     elif args.gamepk is not None:
         game_pk = args.gamepk
-        
+
     else:
         parser.print_usage()
 
@@ -1289,7 +1358,7 @@ if __name__ == "__main__":
     else:
         schedule = scoreboard.api.fetch_schedule_data(game_date)
         if schedule['totalGames'] == 0:
-            print('MLB day off; no games scheduled.\n')  
+            print('MLB day off; no games scheduled.\n')
             sys.exit()
         elif args.home_team is not None and args.away_team is not None and args.game_date:
             print('\nNo game found for {} at {} on {}'.format(args.away_team, args.home_team, args.game_date))
@@ -1303,7 +1372,7 @@ if __name__ == "__main__":
         if schedule['totalGames'] > 0:
             print('Today\'s games:')
             for games in schedule['dates'][0]['games']:
-                print('{} - {} @ {}'.format(games['gamePk'], games['teams']['away']['team']['name'], games['teams']['home']['team']['name']))
-
+                print('{} - {} @ {}'.format(games['gamePk'], games['teams']['away']['team']['name'],
+                                            games['teams']['home']['team']['name']))
 
 # <SDG><
